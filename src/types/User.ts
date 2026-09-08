@@ -65,6 +65,18 @@ export interface User {
         filmography?: ProfileFilm[];
         outsideAgency?: ProfileFilm[];
         username?: string;
+
+        /**
+         * Perfil visivel publicamente: listado na Rede (/network) e acessivel
+         * pelo link directo /[username].
+         *
+         * Opcional de proposito: as contas criadas antes deste campo nao o tem
+         * gravado e continuam visiveis — ausente vale por true.
+         *
+         * Quem filtra e a API (GET /api/v1/users so devolve perfis visiveis),
+         * por isso o front nao repete a regra: limita-se a mostrar o que recebe.
+         */
+        isVisible?: boolean;
     }
 
     createdAt?: Date;

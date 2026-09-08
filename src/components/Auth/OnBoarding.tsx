@@ -53,7 +53,9 @@ const defaultRegister: User = {
         professionalPhone: "",
         services: [],
         coverImageUrl: "",
-        imageUrl: ""
+        imageUrl: "",
+        // Quem se regista entra visivel na Rede; pode esconder-se depois.
+        isVisible: true
     }
 };
 const formatDateField = (value?: string | Date) => {
@@ -179,7 +181,7 @@ const getMiniSteps = (
 };
 export const OnBoarding: React.FC = () => {
     const router = useRouter();
-    const { user, updateLoggedUserData } = useAuth();
+    const { user, updateLoggedUserData, expireSession } = useAuth();
     const [isLoading, setLoading] = useState(false);
     const [message, setMessage] = useState("");
     const [register, setRegister] = useState<User>(() => buildRegisterFromUser(user));
@@ -270,6 +272,11 @@ export const OnBoarding: React.FC = () => {
         const response = await updateLoggedUser({
             profileData,
         });
+
+        if (response.unauthorized) {
+            expireSession(response.message);
+            return;
+        }
 
         if (response.error) {
             setMessage(response.message || "Nao foi possivel atualizar os dados.");

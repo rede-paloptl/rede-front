@@ -5,12 +5,13 @@ import { Heading } from "./ui/heading"
 import { Text } from './ui/text';
 import { Input } from './ui/Input';
 import { EyeOff } from 'lucide-react';
-import { SubmitEvent, useState } from 'react';
+import { SubmitEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from './ui/button';
 import { GoogleIcon } from '@/icons/GoogleIcon';
 import { useAuth } from '@/hooks/useAuth';
 import { signInWithGoogle } from '@/lib/googleAuth';
+import { SESSION_EXPIRED_MESSAGE } from '@/actions/constants';
 
 
 export const Login: React.FC = () => {
@@ -23,10 +24,33 @@ export const Login: React.FC = () => {
 
     const [email, setEmail] = useState<string>("");
     const [password, setPassword] = useState<string>("");
+    const [sessionNotice, setSessionNotice] = useState("");
+
+
+    /**
+     * Se chegamos aqui por a sessao ter expirado, explicamos porque e que o
+     * utilizador foi posto fora. So depois de montar: sessionStorage nao existe
+     * no servidor. O aviso e consumido uma unica vez.
+     */
+    useEffect(() => {
+        try {
+            const expiredMessage = window.sessionStorage.getItem(SESSION_EXPIRED_MESSAGE);
+
+            if (!expiredMessage) return;
+
+            window.sessionStorage.removeItem(SESSION_EXPIRED_MESSAGE);
+
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- valor so legivel no browser, depois da hidratacao.
+            setSessionNotice(expiredMessage);
+        } catch {
+            // sessionStorage indisponivel: o login funciona na mesma, sem o aviso.
+        }
+    }, []);
 
 
     const handleSigin = async (event: SubmitEvent<HTMLFormElement>) => {
         event.preventDefault();
+        setSessionNotice("");
 
         if (email.length === 0 || password.length === 0) {
             setIsError(true);
@@ -92,6 +116,7 @@ export const Login: React.FC = () => {
     }
 
     const handleGoogleLogin = async () => {
+        setSessionNotice("");
         setShowMessaage(false);
         setGoogleLoading(true);
 
@@ -161,6 +186,10 @@ export const Login: React.FC = () => {
                         <Link href="/reset-pawword" className='flex justify-end mt-4.5'>
                             <Text className='text-[14px] leading-5 font-bold'>Esqueci a senha</Text>
                         </Link>
+
+                        {sessionNotice.length > 0 &&
+                            <Text className="text-[14px] leading-5 text-rede-yellow text-center mt-4">{sessionNotice}</Text>
+                        }
 
                         {(showMessaage && message.length > 0) &&
                             <Text className={`text-[14px] leading-5 ${isError ? "text-rede-red" : "text-rede-yellow"} text-center`} dangerouslySetInnerHTML={{ __html: message }} />

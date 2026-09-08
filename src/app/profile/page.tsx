@@ -30,6 +30,8 @@ const defaultProfileData: ProfileData = {
     otherService: "",
     coverImageUrl: "",
     imageUrl: "",
+    // Sem valor gravado, o perfil conta como visivel (ver isProfileVisible).
+    isVisible: true,
 };
 
 const isBrowserBlobUrl = (value?: string | null) => Boolean(value?.startsWith("blob:"));
@@ -84,12 +86,14 @@ type ProfileContentProps = {
     isAuthenticated: boolean;
     profile: User | null;
     updateLoggedUserData: (data: User) => void;
+    expireSession: (message?: string) => void;
 };
 
 const ProfileContent: React.FC<ProfileContentProps> = ({
     isAuthenticated,
     profile,
     updateLoggedUserData,
+    expireSession,
 }) => {
     const [message, setMessage] = useState("");
     const [isSaving, setIsSaving] = useState(false);
@@ -109,6 +113,12 @@ const ProfileContent: React.FC<ProfileContentProps> = ({
 
     const applyServerProfile = useCallback(
         (response: GetLoggedUserResponseType) => {
+            // O servidor rejeitou o token: nao adianta oferecer "tentar novamente".
+            if (response.unauthorized) {
+                expireSession(response.message);
+                return;
+            }
+
             if (!response.data?.user) {
                 setSyncStatus("error");
                 setMessage(response.message || "Não foi possível carregar o perfil.");
@@ -126,7 +136,7 @@ const ProfileContent: React.FC<ProfileContentProps> = ({
             setMessage("");
             setSyncStatus("ready");
         },
-        [updateLoggedUserData],
+        [updateLoggedUserData, expireSession],
     );
 
     useEffect(() => {
@@ -176,6 +186,11 @@ const ProfileContent: React.FC<ProfileContentProps> = ({
         });
 
         setIsSaving(false);
+
+        if (response.unauthorized) {
+            expireSession(response.message);
+            return false;
+        }
 
         if (response.error) {
             setMessage(response.message || "Não foi possível atualizar o perfil.");
@@ -259,7 +274,7 @@ const ProfileContent: React.FC<ProfileContentProps> = ({
 };
 
 export default function ProfilePage() {
-    const { user, isAuthenticated, updateLoggedUserData } = useAuth();
+    const { user, isAuthenticated, updateLoggedUserData, expireSession } = useAuth();
     const profile = user as User | null;
     const profileKey = profile?.email ?? "guest";
 
@@ -271,6 +286,7 @@ export default function ProfilePage() {
                 isAuthenticated={isAuthenticated}
                 profile={profile}
                 updateLoggedUserData={updateLoggedUserData}
+                expireSession={expireSession}
             />
             <AssociatedNews />
             <Footer />

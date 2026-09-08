@@ -3,6 +3,8 @@ export const MAX_FILE_SIZE_MB = 50;
 export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 export const REDE_DATA = "rede.data";
+// Aviso deixado para a pagina de login quando a sessao expira a meio da navegacao.
+export const SESSION_EXPIRED_MESSAGE = "rede.session-expired";
 export const AUTH_TOKEN = "auth.token";
 export const REFR_TOKEN = "refr.token";
 

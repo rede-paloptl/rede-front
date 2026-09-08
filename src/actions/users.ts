@@ -21,6 +21,8 @@ export type UpdateUserInput = {
 export type GetLoggedUserResponseType = {
   error?: string;
   message?: string;
+  /** O servidor recusou o token: a sessao local ja nao vale nada. */
+  unauthorized?: boolean;
   data?: {
     user?: User;
   };
@@ -29,6 +31,7 @@ export type GetLoggedUserResponseType = {
 export type UpdateUserResponseType = {
   error?: string;
   message?: string;
+  unauthorized?: boolean;
   data?: {
     user?: User;
   };
@@ -37,6 +40,7 @@ export type UpdateUserResponseType = {
 export type DeleteUserResponseType = {
   error?: string;
   message?: string;
+  unauthorized?: boolean;
 };
 
 export type GetUsersResponseType = {
@@ -58,6 +62,7 @@ type UsersApiResponse = {
 
 type ApiError = {
   response?: {
+    status?: number;
     data?: {
       error?: string;
       message?: string;
@@ -67,6 +72,16 @@ type ApiError = {
 
 const getApiError = (err: unknown): ApiError => {
   return typeof err === "object" && err !== null ? err as ApiError : {};
+};
+
+/**
+ * O token foi recusado pelo servidor (expirou, foi revogado ou nunca seguiu).
+ * Nestes casos nao ha nada a tentar de novo: a sessao local tem de cair.
+ */
+const isUnauthorized = (apiError: ApiError): boolean => {
+  const status = apiError.response?.status;
+
+  return status === 401 || status === 403;
 };
 
 const normalizeUsersResponse = (data: UsersApiResponse | NetworkUser[]): NetworkUser[] => {
@@ -147,6 +162,7 @@ export const getLoggedUser = async (): Promise<GetLoggedUserResponseType> => {
       message:
         apiError.response?.data?.message ||
         "Não foi possível carregar os dados do perfil.",
+      unauthorized: isUnauthorized(apiError),
     };
   }
 };
@@ -180,6 +196,7 @@ export const updateLoggedUser = async (
       message:
         apiError.response?.data?.message ||
         "Não foi possível atualizar os dados.",
+      unauthorized: isUnauthorized(apiError),
     };
   }
 };
@@ -205,6 +222,7 @@ export const deleteLoggedUser = async (): Promise<DeleteUserResponseType> => {
       message:
         apiError.response?.data?.message ||
         "Não foi possível apagar o Usuário.",
+      unauthorized: isUnauthorized(apiError),
     };
   }
 };

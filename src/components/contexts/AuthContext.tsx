@@ -18,6 +18,7 @@ import {
     NEXT_AUTH_MESSAGE,
     NEXT_AUTH_SESSION_TOKEN,
     REDE_DATA,
+    SESSION_EXPIRED_MESSAGE,
 } from "@/actions/constants";
 
 import {
@@ -60,6 +61,9 @@ export interface AuthInterface {
 
     signOut: (path?: string) => Promise<void>;
 
+    /** Sessao recusada pelo servidor: limpa tudo e devolve ao login. */
+    expireSession: (message?: string) => void;
+
     updateLoggedUserData: (data: any) => void;
 
     cleanSession: () => void;
@@ -78,6 +82,7 @@ export const AuthContext = createContext<AuthInterface>({
     signInUsingGoogle: async () =>
         ({} as LoginUsingEmailAndPassResponseType),
     signOut: async () => { },
+    expireSession: () => { },
     updateLoggedUserData: () => { },
     cleanSession: () => { },
     updaInternalDataState: () => { },
@@ -264,6 +269,32 @@ export const AuthProvider = ({
 
 
     /**
+     * A sessao deixou de ser aceite pelo servidor (token expirado, revogado
+     * ou ausente). Nao ha nada a tentar de novo: limpamos os dados locais e
+     * devolvemos o utilizador ao login, com o aviso do que aconteceu.
+     */
+    const expireSession = useCallback(
+        (message?: string) => {
+            cleanSession();
+
+            if (typeof window !== "undefined") {
+                try {
+                    window.sessionStorage.setItem(
+                        SESSION_EXPIRED_MESSAGE,
+                        message || "A sua sessão expirou. Inicie sessão novamente."
+                    );
+                } catch {
+                    // sessionStorage indisponivel: seguimos para o login na mesma.
+                }
+            }
+
+            router.replace("/login");
+        },
+        [cleanSession, router]
+    );
+
+
+    /**
      * Logout.
      */
     const signOut = useCallback(
@@ -290,6 +321,7 @@ export const AuthProvider = ({
             signInUsingEmailAndPassword,
             signInUsingGoogle,
             signOut,
+            expireSession,
 
             updateLoggedUserData,
 
@@ -305,6 +337,7 @@ export const AuthProvider = ({
             signInUsingEmailAndPassword,
             signInUsingGoogle,
             signOut,
+            expireSession,
 
             updateLoggedUserData,
 
