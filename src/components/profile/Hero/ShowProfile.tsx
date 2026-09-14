@@ -111,47 +111,51 @@ export const ShowProfile: React.FC<ShowProfileType> = ({
 
         <Text className={`text-[20px] leading-5 font-medium mt-2.5 ${!coreSkillsLabel ? 'text-rede-white/70' : ''}`
         }>{coreSkillsLabel || "Competências principais"}</Text>
-        {profileData.username && <Text className='text-[14px] leading-5 text-rede-white/70 mt-1'>@{profileData.username}</Text>}
+
+        {/* {
+          profileData.username &&
+          <Text className='text-[14px] leading-5 text-rede-white/70 mt-1'>@{profileData.username}</Text>
+        } */}
 
         {hasContacts && (
           <div className='w-full flex flex-wrap gap-5 mt-5'>
-          {location && (
-            isAuthenticated ? (
-              <Button variant={"secondary"} icon={<MapPin width={12} height={12} />} iconPosition='left'>
-                {location}
-              </Button>
-            ) : (
-              <StaticContactChip icon={<MapPin width={12} height={12} />}>
-                {location}
-              </StaticContactChip>
-            )
-          )}
-          {profileData.professionalEmail && (
-            isAuthenticated ? (
-              <Button variant={"secondary"} icon={<Mail width={12} height={12} />} iconPosition='left'>
-                {profileData.professionalEmail}
-              </Button>
-            ) : (
-              <Link href={"mailto:" + profileData.professionalEmail} target="_blank">
-                <StaticContactChip icon={<Mail width={12} height={12} />}>
+            {location && (
+              isAuthenticated ? (
+                <Button variant={"secondary"} icon={<MapPin width={12} height={12} />} iconPosition='left'>
+                  {location}
+                </Button>
+              ) : (
+                <StaticContactChip icon={<MapPin width={12} height={12} />}>
+                  {location}
+                </StaticContactChip>
+              )
+            )}
+            {profileData.professionalEmail && (
+              isAuthenticated ? (
+                <Button variant={"secondary"} icon={<Mail width={12} height={12} />} iconPosition='left'>
                   {profileData.professionalEmail}
-                </StaticContactChip>
-              </Link>
-            )
-          )}
-          {website && (
-            isAuthenticated ? (
-              <Button variant={"secondary"} icon={<GlobeIcon width={12} height={12} />} iconPosition='left'>
-                {website.replace(/^https?:\/\//, "")}
-              </Button>
-            ) : (
-              <Link href={website} target="_blank">
-                <StaticContactChip icon={<GlobeIcon width={12} height={12} />}>
+                </Button>
+              ) : (
+                <Link href={"mailto:" + profileData.professionalEmail} target="_blank">
+                  <StaticContactChip icon={<Mail width={12} height={12} />}>
+                    {profileData.professionalEmail}
+                  </StaticContactChip>
+                </Link>
+              )
+            )}
+            {website && (
+              isAuthenticated ? (
+                <Button variant={"secondary"} icon={<GlobeIcon width={12} height={12} />} iconPosition='left'>
                   {website.replace(/^https?:\/\//, "")}
-                </StaticContactChip>
-              </Link>
-            )
-          )}
+                </Button>
+              ) : (
+                <Link href={website} target="_blank">
+                  <StaticContactChip icon={<GlobeIcon width={12} height={12} />}>
+                    {website.replace(/^https?:\/\//, "")}
+                  </StaticContactChip>
+                </Link>
+              )
+            )}
           </div>
         )}
 

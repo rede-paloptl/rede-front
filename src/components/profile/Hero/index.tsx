@@ -126,6 +126,7 @@ export const Hero: React.FC<HeroProps> = ({
             />
           )}
         </div>
+        
       </div>
 
       <Modal

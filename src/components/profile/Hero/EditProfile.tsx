@@ -287,6 +287,7 @@ export const EditProfile: React.FC<EditProfileType> = ({
             </div>
           </div>
 
+          {/* 
           <div className='flex flex-col gap-2'>
             <Text className='text-[20px] leading-7 font-medium'>Nome de utilizador</Text>
             <Input
@@ -296,7 +297,8 @@ export const EditProfile: React.FC<EditProfileType> = ({
               placeholder='nome-de-utilizador'
               className='max-w-[350px] bg-transparent'
             />
-          </div>
+          </div> 
+          */}
 
           <div className='flex flex-col gap-2'>
             <Text className='text-[20px] leading-7 font-medium'>Contactos e redes</Text>
