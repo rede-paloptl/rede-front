@@ -14,21 +14,6 @@ export type UploadFileResponseType = {
   };
 };
 
-export type GetFileDownloadUrlResponseType = {
-  error?: string;
-  message?: string;
-  unauthorized?: boolean;
-  data?: {
-    url: string;
-  };
-};
-
-export type DeleteFileResponseType = {
-  error?: string;
-  message?: string;
-  unauthorized?: boolean;
-};
-
 type ApiError = {
   response?: {
     status?: number;
@@ -43,18 +28,12 @@ const getApiError = (err: unknown): ApiError => {
   return typeof err === "object" && err !== null ? err as ApiError : {};
 };
 
-const isUnauthorized = (apiError: ApiError): boolean => {
-  const status = apiError.response?.status;
-
-  return status === 401;
-};
-
 /**
  * Envia o ficheiro para a API, que o guarda no R2.
  *
- * O limite de tamanho e validado no servidor: mesmo que o browser deixe
- * escolher um ficheiro maior, a API responde 413 e a mensagem segue em
- * `message`.
+ * Tamanho e tipo sao validados no servidor (2MB; imagens ou documentos
+ * conforme o `purpose`). Imagens voltam com `publicUrl` permanente, que e o
+ * valor a gravar no perfil.
  */
 export const uploadFile = async (
   file: File,
@@ -98,60 +77,8 @@ export const uploadFile = async (
       message:
         apiError.response?.data?.message ||
         "Não foi possível enviar o ficheiro.",
-      unauthorized: isUnauthorized(apiError),
+      unauthorized: apiError.response?.status === 401,
       tooLarge: apiError.response?.status === 413,
-    };
-  }
-};
-
-/** URL temporaria (1h) para abrir um ficheiro privado do utilizador. */
-export const getFileDownloadUrl = async (
-  key: string
-): Promise<GetFileDownloadUrlResponseType> => {
-  try {
-    const responseData = await api.get<{ url: string }>(
-      "/api/v1/files/download-url",
-      { params: { key } }
-    );
-
-    return {
-      data: {
-        url: responseData.data.url,
-      },
-    };
-  } catch (err: unknown) {
-    const apiError = getApiError(err);
-
-    return {
-      error:
-        apiError.response?.data?.error ||
-        "Erro desconhecido",
-      message:
-        apiError.response?.data?.message ||
-        "Não foi possível abrir o ficheiro.",
-      unauthorized: isUnauthorized(apiError),
-    };
-  }
-};
-
-export const deleteFile = async (key: string): Promise<DeleteFileResponseType> => {
-  try {
-    await api.delete("/api/v1/files", { data: { key } });
-
-    return {
-      message: "Ficheiro apagado com sucesso.",
-    };
-  } catch (err: unknown) {
-    const apiError = getApiError(err);
-
-    return {
-      error:
-        apiError.response?.data?.error ||
-        "Erro desconhecido",
-      message:
-        apiError.response?.data?.message ||
-        "Não foi possível apagar o ficheiro.",
-      unauthorized: isUnauthorized(apiError),
     };
   }
 };

@@ -136,7 +136,7 @@ export const Hero: React.FC<HeroProps> = ({
       >
         <ImageCropUploader
           value={profileData.coverImageUrl}
-          folder="profile-covers"
+          purpose="cover-image"
           aspectRatio={16 / 9}
           minHeight={320}
           uploadLabel="Guardar capa"

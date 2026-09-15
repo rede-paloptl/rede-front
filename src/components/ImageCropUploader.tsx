@@ -5,13 +5,14 @@ import { useEffect, useRef, useState } from "react";
 import { Move, Upload, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "./ui/button";
 import { Text } from "./ui/text";
-import { uploadImage } from "@/lib/uploadImage";
+import { uploadFile } from "@/actions/files";
+import type { FilePurpose } from "@/types/File";
 
 type CropPosition = { x: number; y: number };
 
 type ImageCropUploaderProps = {
   value?: string;
-  folder: string;
+  purpose: Extract<FilePurpose, "profile-image" | "cover-image" | "film">;
   aspectRatio?: number;
   height?: number; // NOVO: quando definido, fixa a altura e ignora aspectRatio
   cropShape?: "rect" | "circle";
@@ -26,10 +27,18 @@ type ImageCropUploaderProps = {
   onError?: (message: string) => void;
 };
 
+// O recorte sai sempre em JPEG: uma foto de 1200px fica bem abaixo do limite
+// de 2MB da API, o que em PNG nao e garantido.
+const OUTPUT_TYPE = "image/jpeg";
+const OUTPUT_QUALITY = 0.9;
+const OUTPUT_BACKGROUND = "#1D1D1B";
+
+const toJpegFileName = (fileName: string) =>
+  `${fileName.replace(/\.[^.]+$/, "") || "imagem"}.jpg`;
+
 const createCroppedFile = async (
   imageUrl: string,
   fileName: string,
-  fileType: string,
   zoom: number,
   position: CropPosition,
   aspectRatio: number,
@@ -39,7 +48,7 @@ const createCroppedFile = async (
 
   await new Promise<void>((resolve, reject) => {
     image.onload = () => resolve();
-    image.onerror = () => reject(new Error("N\u00e3o foi poss\u00edvel preparar a imagem."));
+    image.onerror = () => reject(new Error("Não foi possível preparar a imagem."));
     image.src = imageUrl;
   });
 
@@ -50,7 +59,7 @@ const createCroppedFile = async (
   canvas.height = outputHeight;
 
   const context = canvas.getContext("2d");
-  if (!context) throw new Error("N\u00e3o foi poss\u00edvel recortar a imagem.");
+  if (!context) throw new Error("Não foi possível recortar a imagem.");
 
   const baseScale = Math.max(outputWidth / image.naturalWidth, outputHeight / image.naturalHeight);
   const scale = baseScale * zoom;
@@ -59,21 +68,25 @@ const createCroppedFile = async (
   const offsetX = (renderedWidth - outputWidth) * (position.x / 100);
   const offsetY = (renderedHeight - outputHeight) * (position.y / 100);
 
+  // JPEG nao tem transparencia: sem fundo, as zonas transparentes de um PNG
+  // ficariam pretas.
+  context.fillStyle = OUTPUT_BACKGROUND;
+  context.fillRect(0, 0, outputWidth, outputHeight);
   context.drawImage(image, -offsetX, -offsetY, renderedWidth, renderedHeight);
 
   const blob = await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((result) => {
       if (result) resolve(result);
-      else reject(new Error("N\u00e3o foi poss\u00edvel gerar a imagem recortada."));
-    }, fileType || "image/jpeg", 0.92);
+      else reject(new Error("Não foi possível gerar a imagem recortada."));
+    }, OUTPUT_TYPE, OUTPUT_QUALITY);
   });
 
-  return new File([blob], fileName, { type: blob.type });
+  return new File([blob], toJpegFileName(fileName), { type: OUTPUT_TYPE });
 };
 
 export const ImageCropUploader: React.FC<ImageCropUploaderProps> = ({
   value = "",
-  folder,
+  purpose,
   aspectRatio = 16 / 9,
   cropShape = "rect",
   height,
@@ -153,13 +166,19 @@ export const ImageCropUploader: React.FC<ImageCropUploaderProps> = ({
     onError?.("");
 
     try {
-      const croppedFile = await createCroppedFile(previewUrl, selectedFile.name, selectedFile.type, zoom, position, aspectRatio);
-      const { url } = await uploadImage(croppedFile, folder);
+      const croppedFile = await createCroppedFile(previewUrl, selectedFile.name, zoom, position, aspectRatio);
+      const response = await uploadFile(croppedFile, purpose);
+      const url = response.data?.file.publicUrl;
+
+      if (response.error || !url) {
+        throw new Error(response.message ?? "Não foi possível enviar a imagem.");
+      }
+
       await onUploaded(url);
       setSelectedFile(null);
       setSelectedPreviewUrl("");
     } catch (err) {
-      onError?.(err instanceof Error ? err.message : "N\u00e3o foi poss\u00edvel enviar a imagem.");
+      onError?.(err instanceof Error ? err.message : "Não foi possível enviar a imagem.");
     } finally {
       setIsUploading(false);
     }

@@ -153,7 +153,7 @@ export const AddFilmModal: React.FC<FilmFormModalProps> = ({
         <ImageCropUploader
           height={250}
           value={form.cover}
-          folder="films"
+          purpose="film"
           aspectRatio={300 / 220}
           minHeight={252}
           helperText={"Mantenha o conteúdo principal dentro da área vazia. As faixas laterais podem ser cortadas consoante o formato do cartão."}
