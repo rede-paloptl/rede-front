@@ -2,6 +2,7 @@ import { GuestOnly } from "@/components/Auth/GuestOnly";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { Signup } from "@/components/Auth/Signup";
 
 const InformationBox: React.FC = () => {
     return (
@@ -27,7 +28,7 @@ export default function SignupPage() {
         <GuestOnly>
             <div className="w-full min-h-screen bg-[url('/assets/signup/signup.png')] bg-cover bg-center flex justify-center items-start md:items-center overflow-y-auto py-10 pt-28 pb-10">
                 {/* <Signup /> */}
-                <InformationBox />
+                <InformationBox /> 
             </div >
         </GuestOnly>
     )

@@ -1,13 +1,17 @@
+"use client";
+
 import { Heading } from "@/components/ui/heading";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { customBlur } from "@/app/fonts";
+import { getPublishedNews } from "@/actions/news";
+import { usePublicContent } from "@/hooks/usePublicContent";
 import { ArticleCard } from "../ArticleCard";
-import { NEWS } from "../news/data";
 import Link from "next/link";
 
 
 export const WorkShops: React.FC = () => {
+    const { data: news } = usePublicContent(getPublishedNews);
 
     const images = [
         "/assets/home/workshops/shop-1.png",
@@ -29,9 +33,10 @@ export const WorkShops: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {NEWS.map((news) => (
+                    {(news ?? []).slice(0, 3).map((item) => (
                         <ArticleCard
-                            newsData={news}
+                            key={item.id}
+                            newsData={item}
                         />
                     ))}
                 </div>

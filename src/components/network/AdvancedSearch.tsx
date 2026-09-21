@@ -8,7 +8,7 @@ import { ProfileCard } from "../ProfileCard";
 import { Heading } from "../ui/heading";
 import { Text } from "../ui/text";
 import { FilterSidebar } from "./FilterSidebar";
-import { filterProfiles } from "./actions";
+import { countProfilesByType, filterProfiles } from "./actions";
 import { useNetworkFilters } from "./useNetworkFilters";
 import { useNetworkProfiles } from "./useNetworkProfiles";
 
@@ -21,6 +21,14 @@ export const AdvancedSearch: React.FC = () => {
   const results = useMemo(
     () => filterProfiles(profiles, filters),
     [filters, profiles],
+  );
+
+  // Sem perfis carregados nao ha contagens: um zero seria lido como "nao ha
+  // ninguem deste tipo".
+  const typeCounts = useMemo(
+    () =>
+      status === "ready" ? countProfilesByType(profiles, filters) : undefined,
+    [filters, profiles, status],
   );
 
   return (
@@ -51,6 +59,7 @@ export const AdvancedSearch: React.FC = () => {
           <div className="w-full shrink-0 px-4 sm:px-6 lg:w-auto lg:px-0">
             <FilterSidebar
               filters={filters}
+              typeCounts={typeCounts}
               onFiltersChange={setFilters}
               onClear={clearFilters}
             />

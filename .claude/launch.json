@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "rede-front",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "rede-back",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "../rede-back", "run", "dev"],
+      "port": 4001,
+      "autoPort": false
+    }
+  ]
+}

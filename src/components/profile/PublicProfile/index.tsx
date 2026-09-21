@@ -51,15 +51,18 @@ export const PublicProfile: React.FC<PublicProfileProps> = ({ profile }) => {
       <Achievements
         isAuthenticated={false}
         achievements={profileData.achievements}
+        films={[...(profileData.filmography ?? []), ...(profileData.outsideAgency ?? [])]}
       />
       <Filmography
         isAuthenticated={false}
         films={profileData.filmography}
+        achievements={profileData.achievements}
         accountType={profileData.accountType}
       />
       {/* <OutsideAgency
         isAuthenticated={false}
         films={profileData.outsideAgency}
+        achievements={profileData.achievements}
         accountType={profileData.accountType}
       /> */}
     </>

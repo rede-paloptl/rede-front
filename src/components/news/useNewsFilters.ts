@@ -6,11 +6,10 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import { countriesList, normalizeLabelKey } from '../network/filters'
 import {
   defaultNewsFilters,
-  getNewsYearOptions,
   NewsFilters,
   normalizeNewsValue,
 } from './actions'
-import { NEWS, newsCategories, newsSubCategories } from './data'
+import { newsCategories, newsSubCategories } from './data'
 
 type NewsFilterKey = keyof NewsFilters
 
@@ -59,8 +58,14 @@ const findCountryByValue = (value: string) => {
 const findCategoryByValue = (value: string) =>
   newsCategories.find((category) => optionMatches(category, value))
 
-const findYearByValue = (value: string) =>
-  getNewsYearOptions(NEWS).find((year) => optionMatches(year, value))
+// As notícias chegam da API depois de a página abrir: o ano do URL não pode
+// depender da lista carregada. Qualquer ano de quatro dígitos é aceite; se não
+// houver notícias desse ano, a listagem mostra o estado vazio.
+const findYearByValue = (value: string) => {
+  const year = value.trim()
+
+  return /^\d{4}$/.test(year) ? { label: year, value: year } : undefined
+}
 
 const findSubCategoryParent = (value: string) => {
   const normalizedValue = normalizeNewsValue(value)

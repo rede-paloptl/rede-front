@@ -1,4 +1,4 @@
-import { Edit2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { customBlur } from "@/app/fonts";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
@@ -101,16 +101,6 @@ export const SectionEditBio: React.FC<SectionEditBioProps> = ({
           Biografia
         </Heading>
 
-        {isAuthenticated && !isEditingBio && (
-          <Button
-            variant="secondary"
-            className="rounded-full p-0 shrink-0 aspect-square w-10 h-10 flex items-center justify-center"
-            onClick={handleStartEditing}
-          >
-            <Edit2 width={12} height={12} />
-          </Button>
-        )}
-
         {isAuthenticated && isEditingBio && (
           <div className="w-full flex gap-1">
             <Button disabled={isSaving} onClick={handleSave}>{isSaving ? "A guardar..." : "Guardar"}</Button>
@@ -134,6 +124,42 @@ export const SectionEditBio: React.FC<SectionEditBioProps> = ({
             {draftBio.length}/{BIO_MAX_LENGTH} caracteres usados - {remainingCharacters} restantes
           </Text>
         </div>
+      ) : isAuthenticated ? (
+        // Sem passo "Editar": o dono clica no texto e escreve logo.
+        bio.trim() ? (
+          <div
+            role="button"
+            tabIndex={0}
+            title="Clique para editar a biografia"
+            aria-label="Editar biografia"
+            onClick={(event) => {
+              // Os links da biografia continuam a abrir normalmente.
+              if ((event.target as HTMLElement).closest("a")) return;
+              handleStartEditing();
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                handleStartEditing();
+              }
+            }}
+            className="w-[94%] cursor-text rounded-lg outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-rede-yellow"
+          >
+            <Text className="whitespace-pre-wrap break-words text-[14px] leading-relaxed font-medium">
+              {formattedBio}
+            </Text>
+          </div>
+        ) : (
+          <Button
+            variant="secondary"
+            className="w-fit"
+            icon={<Plus width={12} height={12} aria-hidden="true" />}
+            iconPosition="left"
+            onClick={handleStartEditing}
+          >
+            Adicionar biografia
+          </Button>
+        )
       ) : (
         bio.trim() ? (
           <Text className="w-[94%] whitespace-pre-wrap break-words text-[14px] leading-relaxed font-medium">

@@ -8,6 +8,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { confirmAccountAndChangePassword } from "@/actions/authentication";
 import { useAuth } from "@/hooks/useAuth";
+import { ResendConfirmation } from "./ResendConfirmation";
 
 export const ConfirmAccount: React.FC<{ token: string }> = ({ token }) => {
     const { updaInternalDataState } = useAuth();
@@ -18,6 +19,8 @@ export const ConfirmAccount: React.FC<{ token: string }> = ({ token }) => {
     const [successInfo, setSuccessInfo] = useState<boolean>(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showRePassword, setShowRePassword] = useState(false);
+    // O back recusou o token (invalido, expirado ou ja usado): so resta pedir um novo link
+    const [tokenRejectedMessage, setTokenRejectedMessage] = useState<string>("");
 
 
     const submitForm = async (event: SubmitEvent<HTMLFormElement>) => {
@@ -25,8 +28,8 @@ export const ConfirmAccount: React.FC<{ token: string }> = ({ token }) => {
 
         setMessage("");
 
-        if (password.length < 8 || rePassword.length < 0) {
-            setMessage("A palavra-passe deve ter pelomenos 8 carateres");
+        if (password.length < 8) {
+            setMessage("A palavra-passe deve ter pelo menos 8 caracteres.");
             return;
         }
 
@@ -37,30 +40,45 @@ export const ConfirmAccount: React.FC<{ token: string }> = ({ token }) => {
 
         setIsLoading(true);
         const responseData = await confirmAccountAndChangePassword(token, password);
-        const { error, message } = responseData;
-
-        if (String(error || "").length > 0 && String(message || "").length > 0) {
-            setMessage(String(message || ""));
-            return;
-        }
 
         if (responseData?.user && responseData?.token) {
             setSuccessInfo(true);
             updaInternalDataState({ profileData: responseData?.user, token: responseData?.token });
-            setMessage("Palavra-passe alteradaa com sucesso! A Redirecionar...");
+            setMessage("Conta confirmada com sucesso! A redirecionar...");
 
             setTimeout(() => {
                 location.href = "/onboarding";
             }, 2000)
+            return;
         }
 
         setIsLoading(false);
+        setTokenRejectedMessage(responseData?.message || "Não foi possível confirmar a conta.");
+    }
+
+
+    if (!token || tokenRejectedMessage) {
+        return (
+            <div className='w-full flex flex-col gap-6'>
+                <Text className='text-[14px] leading-5 text-center text-rede-red'>
+                    {tokenRejectedMessage || "Este link de confirmação não é válido."}
+                </Text>
+                <Text className='text-[14px] leading-5 text-center'>
+                    Indique o email da sua conta para receber um novo link de confirmação.
+                </Text>
+                <ResendConfirmation />
+            </div>
+        )
     }
 
 
     return (
         <form onSubmit={submitForm}>
             <div className='w-full flex flex-col gap-6'>
+                <Text className='text-[14px] leading-5 text-center'>
+                    Defina a palavra-passe da sua conta para concluir a confirmação.
+                </Text>
+
                 <div className='flex flex-col gap-2'>
                     <label className='text-[20px] leading-7' htmlFor='passField'>Palavra-passe</label>
                     <Input variant={"secondary"} placeholder='********' type={showPassword ? "text" : "password"} className='w-full' id='passField' value={password} onChange={(event) => setPassword(event.target.value)}
@@ -79,17 +97,12 @@ export const ConfirmAccount: React.FC<{ token: string }> = ({ token }) => {
                     />
                 </div>
 
-                {/* {
-                    (message.length > 0) &&
-                    <Text className='text-[14px] leading-6 font-bold text-center flex justify-center items-center gap-2.5 text-rede-red' dangerouslySetInnerHTML={{ __html: message }} />
-                } */}
-
                 {(message.length > 0) &&
-                    <Text className={`text-[14px] leading-5 ${successInfo ? "text-rede-yellow" : "text-rede-red"} text-center`} dangerouslySetInnerHTML={{ __html: message }} />
+                    <Text className={`text-[14px] leading-5 ${successInfo ? "text-rede-yellow" : "text-rede-red"} text-center`}>{message}</Text>
                 }
 
                 <Button type='submit' containerClassName='w-full' className='text-rede-surface' disabled={isLoading} >
-                    {isLoading ? "A processar" : "Alterar"}
+                    {isLoading ? "A processar..." : "Confirmar conta"}
                 </Button>
             </div>
         </form>

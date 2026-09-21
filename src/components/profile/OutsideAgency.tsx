@@ -3,38 +3,65 @@
 import { useMemo, useState } from "react";
 import { Edit2, Plus, Trash2 } from "lucide-react";
 import { customBlur } from "@/app/fonts";
-import { AccountType, ProfileFilm } from "@/types/User";
+import { AccountType, ProfileAchievement, ProfileFilm } from "@/types/User";
 import { Heading } from "@/components/ui/heading";
 import { Text } from "@/components/ui/text";
 import { Button } from "../ui/button";
 import { FilmCard, FilmCardType } from "../FilmCard";
 import { AddFilmModal, FilmFormData } from "../AddFilmModal";
 
+import { FilmDetailsModal } from "./FilmDetailsModal";
+
 const FILM_PLACEHOLDER_COVER = "/assets/placeholder-img.jpg";
 
 type LocalFilmCardProps = {
   film: FilmCardType;
-  isEditing: boolean;
+  canManage: boolean;
+  disabled: boolean;
   onEdit: (id: string) => void;
   onRemove: (id: string) => void;
+  onOpen: (id: string) => void;
 };
 
 const FilmCardLocal: React.FC<LocalFilmCardProps> = ({
   film,
-  isEditing,
+  canManage,
+  disabled,
   onEdit,
   onRemove,
+  onOpen,
 }) => (
-  <div className="relative w-full">
-    <FilmCard filmData={film} v="v2" />
+  // Clicar no cartao abre o detalhe do filme; a seta (abre o link) e os
+  // botoes de editar/remover mantem o seu proprio comportamento.
+  <div
+    role="button"
+    tabIndex={0}
+    aria-label={`Ver detalhes do filme ${film.title}`}
+    className="relative w-full cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-rede-white/80"
+    onClick={(event) => {
+      if ((event.target as HTMLElement).closest("button")) return;
 
-    {isEditing && (
+      onOpen(film.id);
+    }}
+    onKeyDown={(event) => {
+      if (event.target !== event.currentTarget) return;
+
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        onOpen(film.id);
+      }
+    }}
+  >
+    <FilmCard filmData={film} v="v2" tagsAsText />
+
+    {canManage && (
       <div className="absolute right-3 top-3 z-10 flex gap-2">
         <button
           type="button"
           aria-label={`Editar o filme ${film.title}`}
+          disabled={disabled}
           onClick={() => onEdit(film.id)}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-rede-white backdrop-blur transition-colors hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rede-white sm:h-8 sm:w-8"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-rede-white backdrop-blur transition-colors hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rede-white disabled:cursor-not-allowed disabled:opacity-40 sm:h-8 sm:w-8"
         >
           <Edit2 width={12} height={12} aria-hidden="true" />
         </button>
@@ -42,8 +69,9 @@ const FilmCardLocal: React.FC<LocalFilmCardProps> = ({
         <button
           type="button"
           aria-label={`Remover o filme ${film.title}`}
+          disabled={disabled}
           onClick={() => onRemove(film.id)}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-rede-white backdrop-blur transition-colors hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rede-white sm:h-8 sm:w-8"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-rede-white backdrop-blur transition-colors hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rede-white disabled:cursor-not-allowed disabled:opacity-40 sm:h-8 sm:w-8"
         >
           <Trash2 width={12} height={12} aria-hidden="true" />
         </button>
@@ -54,9 +82,10 @@ const FilmCardLocal: React.FC<LocalFilmCardProps> = ({
 
 type AddFilmTileProps = {
   onAdd: () => void;
+  disabled?: boolean;
 };
 
-const AddFilmTile: React.FC<AddFilmTileProps> = ({ onAdd }) => (
+const AddFilmTile: React.FC<AddFilmTileProps> = ({ onAdd, disabled }) => (
   <div className="flex min-h-[280px] w-full items-center justify-center rounded-lg border border-dashed border-rede-white/30 px-4 sm:min-h-[380px]">
     <Button
       variant="secondary"
@@ -64,6 +93,7 @@ const AddFilmTile: React.FC<AddFilmTileProps> = ({ onAdd }) => (
       iconPosition="left"
       icon={<Plus width={12} height={12} aria-hidden="true" />}
       iconButtonClassName="border border-dashed"
+      disabled={disabled}
       onClick={onAdd}
     >
       Adicionar filme externo
@@ -74,6 +104,8 @@ const AddFilmTile: React.FC<AddFilmTileProps> = ({ onAdd }) => (
 type OutsideAgencyProps = {
   isAuthenticated?: boolean;
   films?: ProfileFilm[];
+  /** Entradas de festivais, premios e exibicoes, para o detalhe de cada filme. */
+  achievements?: ProfileAchievement[];
   accountType?: AccountType;
   isSaving?: boolean;
   onSaveFilms?: (
@@ -81,26 +113,30 @@ type OutsideAgencyProps = {
   ) => Promise<boolean> | boolean;
 };
 
+/**
+ * Sem passo "Editar": "Adicionar filme externo" (ou o lapis de um filme) abre o
+ * formulario, e o seu "Guardar filme" grava logo no perfil. Remover pede
+ * confirmacao e grava tambem.
+ */
 export const OutsideAgency: React.FC<OutsideAgencyProps> = ({
   isAuthenticated = false,
   films,
+  achievements,
   accountType,
   isSaving = false,
   onSaveFilms,
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [draft, setDraft] = useState<ProfileFilm[]>(films ?? []);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingFilmId, setEditingFilmId] = useState<string | null>(
     null,
   );
   const [formSession, setFormSession] = useState(0);
+  const [selectedFilmId, setSelectedFilmId] = useState<string | null>(null);
 
-  const data = films ?? [];
-  const visibleFilms = isEditing ? draft : data;
+  const data = useMemo(() => films ?? [], [films]);
 
   const editingFilm = editingFilmId
-    ? draft.find((film) => film.id === editingFilmId)
+    ? data.find((film) => film.id === editingFilmId)
     : undefined;
 
   const initialFormData = useMemo<
@@ -115,7 +151,7 @@ export const OutsideAgency: React.FC<OutsideAgencyProps> = ({
       title: editingFilm.title,
       year: String(editingFilm.year),
       duration: editingFilm.duration ?? "",
-      country: editingFilm.countries[0] ?? "",
+      countries: editingFilm.countries ?? [],
       theme: editingFilm.type[1] ?? "",
       genre: editingFilm.type[0] ?? "",
       link: editingFilm.link ?? "",
@@ -124,9 +160,10 @@ export const OutsideAgency: React.FC<OutsideAgencyProps> = ({
     };
   }, [editingFilm]);
 
-  const handleFormSubmit = (formData: FilmFormData) => {
+  // O AddFilmModal mostra a mensagem se isto lancar, e mantem-se aberto.
+  const handleFormSubmit = async (formData: FilmFormData) => {
     const currentFilm = formData.id
-      ? draft.find((film) => film.id === formData.id)
+      ? data.find((film) => film.id === formData.id)
       : undefined;
 
     const submittedFilm: ProfileFilm = {
@@ -135,49 +172,36 @@ export const OutsideAgency: React.FC<OutsideAgencyProps> = ({
       director: currentFilm?.director ?? "",
       type: [formData.genre, formData.theme].filter(Boolean),
       year: Number(formData.year) || new Date().getFullYear(),
-      countries: [formData.country].filter(Boolean),
+      countries: formData.countries,
       cover: formData.cover || FILM_PLACEHOLDER_COVER,
       duration: formData.duration,
       link: formData.link,
       roles: formData.roles.length ? formData.roles : undefined,
     };
 
-    setDraft((currentDraft) =>
-      formData.id
-        ? currentDraft.map((film) =>
-            film.id === formData.id ? submittedFilm : film,
-          )
-        : [...currentDraft, submittedFilm],
-    );
+    const nextFilms = formData.id
+      ? data.map((film) =>
+        film.id === formData.id ? submittedFilm : film,
+      )
+      : [...data, submittedFilm];
 
-    setEditingFilmId(null);
-    setIsFormOpen(false);
-  };
+    const saved = await onSaveFilms?.(nextFilms);
 
-  const startEditing = () => {
-    setDraft(data);
-    setIsEditing(true);
-  };
-
-  const handleSave = async () => {
-    const saved = await onSaveFilms?.(draft);
-
-    if (saved) {
-      setIsEditing(false);
+    if (!saved) {
+      throw new Error("Não foi possível guardar o filme. Tente novamente.");
     }
-  };
 
-  const handleCancel = () => {
-    setDraft(data);
     setEditingFilmId(null);
     setIsFormOpen(false);
-    setIsEditing(false);
   };
 
-  const removeFilm = (id: string) => {
-    setDraft((currentDraft) =>
-      currentDraft.filter((film) => film.id !== id),
-    );
+  const removeFilm = async (id: string) => {
+    const film = data.find((item) => item.id === id);
+
+    if (isSaving || !film) return;
+    if (!window.confirm(`Remover "${film.title}" dos filmes fora da agência?`)) return;
+
+    await onSaveFilms?.(data.filter((item) => item.id !== id));
   };
 
   const addFilm = () => {
@@ -193,6 +217,8 @@ export const OutsideAgency: React.FC<OutsideAgencyProps> = ({
   };
 
   const handleCloseForm = () => {
+    if (isSaving) return;
+
     setEditingFilmId(null);
     setIsFormOpen(false);
   };
@@ -206,62 +232,38 @@ export const OutsideAgency: React.FC<OutsideAgencyProps> = ({
               <Heading className={`${customBlur.className} text-[48px] leading-12`}>
                 Fora da agência
               </Heading>
-
-              {isAuthenticated && !isEditing && (
-                <Button
-                  variant="secondary"
-                  aria-label="Editar filmes fora da agência"
-                  className="flex aspect-square h-10 w-10 shrink-0 items-center justify-center rounded-full p-0"
-                  onClick={startEditing}
-                >
-                  <Edit2 width={12} height={12} aria-hidden="true" />
-                </Button>
-              )}
             </div>
-
-            {isAuthenticated && isEditing && (
-              <div className="flex w-full gap-2 sm:w-auto sm:gap-1">
-                <Button
-                  disabled={isSaving}
-                  className="flex-1 sm:flex-none"
-                  onClick={handleSave}
-                >
-                  {isSaving ? "A guardar..." : "Guardar"}
-                </Button>
-
-                <Button
-                  variant="secondary"
-                  disabled={isSaving}
-                  className="flex-1 sm:flex-none"
-                  onClick={handleCancel}
-                >
-                  Cancelar
-                </Button>
-              </div>
-            )}
           </div>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {visibleFilms.length > 0
-              ? visibleFilms.map((film) => (
-                  <FilmCardLocal
-                    key={film.id}
-                    film={film}
-                    isEditing={isEditing}
-                    onEdit={handleEditFilm}
-                    onRemove={removeFilm}
-                  />
-                ))
-              : !isEditing && (
-                  <Text className="text-[14px] leading-relaxed font-medium">
-                    Ainda não existem filmes fora da agência.
-                  </Text>
-                )}
+            {data.length > 0
+              ? data.map((film) => (
+                <FilmCardLocal
+                  key={film.id}
+                  film={film}
+                  canManage={isAuthenticated}
+                  disabled={isSaving}
+                  onEdit={handleEditFilm}
+                  onRemove={(id) => void removeFilm(id)}
+                  onOpen={setSelectedFilmId}
+                />
+              ))
+              : !isAuthenticated && (
+                <Text className="text-[14px] leading-relaxed font-medium">
+                  Ainda não existem filmes fora da agência.
+                </Text>
+              )}
 
-            {isEditing && <AddFilmTile onAdd={addFilm} />}
+            {isAuthenticated && <AddFilmTile onAdd={addFilm} disabled={isSaving} />}
           </div>
         </div>
       </div>
+
+      <FilmDetailsModal
+        film={data.find((film) => film.id === selectedFilmId) ?? null}
+        achievements={achievements}
+        onClose={() => setSelectedFilmId(null)}
+      />
 
       <AddFilmModal
         key={formSession}

@@ -1,6 +1,5 @@
 import { customBlur } from "@/app/fonts";
 import { Tag } from "@/components/ui/tag";
-import { Button } from "@/components/ui/button";
 import { Heading } from "@/components/ui/heading";
 import { Select, SelectOption } from "@/components/ui/select";
 import {
@@ -8,8 +7,8 @@ import {
     getSubCategoriesByAccountType,
 } from "@/components/network/data";
 import { User } from "@/types/User";
-import { Edit2, X } from "lucide-react";
-import { Dispatch, SetStateAction, useMemo, useState } from "react";
+import { X } from "lucide-react";
+import { Dispatch, SetStateAction, useMemo } from "react";
 import { Text } from "@/components/ui/text";
 
 type ProfileData = User["profileData"];
@@ -33,6 +32,7 @@ export const getSkillOptions = (profileData?: ProfileData): SelectOption[] => {
 
 type SectionEditSkillsProps = {
     isAuthenticated?: boolean;
+    /** Ja nao ha modo de edicao: mantidos so por compatibilidade com quem chama. */
     isEditingSkils?: boolean;
     setIsEditingSkils?: Dispatch<SetStateAction<boolean>>;
     profileData?: ProfileData;
@@ -41,49 +41,37 @@ type SectionEditSkillsProps = {
     onSaveSkills?: (skills: string[]) => void | Promise<void>;
 }
 
+/**
+ * Sem passo "Editar": o dono do perfil escolhe uma competencia e ela fica
+ * gravada logo; o "x" de uma tag remove-a e grava tambem.
+ */
 export const SectionEditSkills: React.FC<SectionEditSkillsProps> = ({
     isAuthenticated,
-    isEditingSkils = false,
-    setIsEditingSkils,
     profileData,
     skills = [],
     isSaving = false,
     onSaveSkills,
 }) => {
-    const [draftSkills, setDraftSkills] = useState<string[]>(skills);
-    const visibleSkills = isEditingSkils ? draftSkills : skills;
     const skillOptions = useMemo(
         () => getSkillOptions(profileData).filter(
-            (option) => !draftSkills.includes(option.label) && !draftSkills.includes(option.value),
+            (option) => !skills.includes(option.label) && !skills.includes(option.value),
         ),
-        [profileData, draftSkills],
+        [profileData, skills],
     );
 
-    const startEditing = () => {
-        setDraftSkills(skills);
-        setIsEditingSkils?.(true);
-    };
-
-    const handleCancel = () => {
-        setDraftSkills(skills);
-        setIsEditingSkils?.(false);
-    };
-
     const removeSkill = (skill: string) => {
-        setDraftSkills((lastState) => lastState.filter((item) => item !== skill));
+        if (isSaving) return;
+
+        void onSaveSkills?.(skills.filter((item) => item !== skill));
     };
 
-    const handleSubCategoryChange = (value: string) => {
+    const addSkill = (value: string) => {
         const selectedOption = skillOptions.find((option) => option.value === value);
         const skill = selectedOption?.label ?? value;
 
-        if (!skill || draftSkills.includes(skill)) return;
+        if (isSaving || !skill || skills.includes(skill)) return;
 
-        setDraftSkills((lastState) => [...lastState, skill]);
-    };
-
-    const handleSave = () => {
-        void onSaveSkills?.(draftSkills);
+        void onSaveSkills?.([...skills, skill]);
     };
 
     return (
@@ -92,40 +80,23 @@ export const SectionEditSkills: React.FC<SectionEditSkillsProps> = ({
                 <Heading className={`${customBlur.className} text-[48px] leading-12`}>
                     Competências
                 </Heading>
-
-                {isAuthenticated && !isEditingSkils && (
-                    <Button
-                        variant="secondary"
-                        className="rounded-full p-0 shrink-0 aspect-square w-10 h-10 flex items-center justify-center"
-                        onClick={startEditing}
-                    >
-                        <Edit2 width={12} height={12} />
-                    </Button>
-                )}
-
-                {isAuthenticated && isEditingSkils && (
-                    <div className="w-full flex gap-1">
-                        <Button disabled={isSaving} onClick={handleSave}>{isSaving ? "A guardar..." : "Guardar"}</Button>
-                        <Button variant="secondary" disabled={isSaving} onClick={handleCancel}>
-                            Cancelar
-                        </Button>
-                    </div>
-                )}
             </div>
 
             <div className="w-full flex flex-col gap-4">
                 <div className="flex flex-wrap gap-2.5 pt-5 pb-5 border-b border-b-white/900">
-                    {visibleSkills.length > 0 ? visibleSkills.map((skill) => (
+                    {skills.length > 0 ? skills.map((skill) => (
                         <Tag key={skill} className="flex gap-1 items-center">
                             {skill}
-                            {isEditingSkils && (
-                                <X
-                                    width={12}
-                                    height={12}
-                                    color="#ffffff"
-                                    className="cursor-pointer"
+                            {isAuthenticated && (
+                                <button
+                                    type="button"
+                                    aria-label={`Remover ${skill}`}
+                                    disabled={isSaving}
                                     onClick={() => removeSkill(skill)}
-                                />
+                                    className="inline-flex cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                    <X width={12} height={12} color="#ffffff" />
+                                </button>
                             )}
                         </Tag>
                     )) :
@@ -135,17 +106,17 @@ export const SectionEditSkills: React.FC<SectionEditSkillsProps> = ({
                     }
                 </div>
 
-
-                {isEditingSkils && (
+                {isAuthenticated && (
                     <Select
                         variant="secondary"
                         value=""
-                        placeholder="Selecionar competência"
+                        placeholder={isSaving ? "A guardar..." : "Adicionar competência"}
                         options={skillOptions}
+                        disabled={isSaving}
                         triggerClassName="border-[1.3px] border-white px-3 text-rede-white outline-none"
                         popoverClassName="rounded-[8px] border-[1.3px] border-white px-3 text-rede-white outline-none mt-[10px]"
                         satelliteClassName="border-[1.3px] border-white"
-                        onChange={handleSubCategoryChange}
+                        onChange={addSkill}
                     />
                 )}
             </div>

@@ -28,6 +28,20 @@ export function normalizeText(value: string) {
     .toLowerCase()
 }
 
+// Links escritos pelos utilizadores vem muitas vezes sem protocolo
+// ("youtu.be/..."): sem ele o browser trata-os como caminho do proprio site.
+export function toExternalUrl(value?: string) {
+  const url = value?.trim()
+  if (!url) return ''
+
+  return /^[a-z][a-z0-9+.-]*:/i.test(url) ? url : `https://${url.replace(/^\/+/, '')}`
+}
+
+export function openExternalUrl(value?: string) {
+  const url = toExternalUrl(value)
+  if (url) window.open(url, '_blank', 'noopener,noreferrer')
+}
+
 export function withCurrentColor(icon: ReactNode) {
   if (!isValidElement<{ className?: string }>(icon)) return icon
   return cloneElement(icon, {

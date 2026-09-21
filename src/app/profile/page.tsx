@@ -252,12 +252,14 @@ const ProfileContent: React.FC<ProfileContentProps> = ({
             <Achievements
                 isAuthenticated={isAuthenticated}
                 achievements={profileData.achievements}
+                films={[...(profileData.filmography ?? []), ...(profileData.outsideAgency ?? [])]}
                 isSaving={isSaving}
                 onSaveAchievements={(achievements) => saveProfileData({ achievements })}
             />
             <Filmography
                 isAuthenticated={isAuthenticated}
                 films={profileData.filmography}
+                achievements={profileData.achievements}
                 accountType={profileData.accountType}
                 isSaving={isSaving}
                 onSaveFilms={(filmography) => saveProfileData({ filmography })}
@@ -265,6 +267,7 @@ const ProfileContent: React.FC<ProfileContentProps> = ({
             {/* <OutsideAgency
                 isAuthenticated={isAuthenticated}
                 films={profileData.outsideAgency}
+                achievements={profileData.achievements}
                 accountType={profileData.accountType}
                 isSaving={isSaving}
                 onSaveFilms={(outsideAgency) => saveProfileData({ outsideAgency })}

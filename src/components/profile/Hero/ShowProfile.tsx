@@ -9,6 +9,7 @@ import { Modal } from "@/components/ui/modal"
 import { ImageCropUploader } from "@/components/ImageCropUploader"
 import Link from "next/link"
 import { getCountryLabel } from "@/components/network/filters"
+import { EditDataModal } from "./EditDataModal"
 
 type ProfileData = User["profileData"];
 
@@ -63,6 +64,17 @@ export const ShowProfile: React.FC<ShowProfileType> = ({
   onImageUploadError,
 }) => {
   const [isAvatarCropOpen, setIsAvatarCropOpen] = useState(false);
+  const [isDataModalOpen, setIsDataModalOpen] = useState(false);
+
+  // So fecha o modal depois de o servidor confirmar a gravacao.
+  const handleSaveData = async (patch: Partial<ProfileData>, userPatch: Pick<User, "name">) => {
+    const saved = Boolean(await onSaveProfileData?.(patch, userPatch));
+
+    if (saved) setIsDataModalOpen(false);
+
+    return saved;
+  };
+
   const displayName = profile?.name || profileData.artisticName || profileData.commercialName || "Perfil";
   const location = [profileData.city, getCountryLabel(profileData.country)].filter(Boolean).join(", ");
   const website = profileData.socialLinks?.website;
@@ -159,12 +171,19 @@ export const ShowProfile: React.FC<ShowProfileType> = ({
           </div>
         )}
 
-        {profileData.professionalPhone && (
+        {(profileData.professionalPhone || isAuthenticated) && (
           <div className='w-full flex flex-wrap gap-5 mt-5'>
             {isAuthenticated ? (
-              <Button icon={<PhoneIcon width={12} height={12} color='black' />} iconPosition='left' className='bg-rede-yellow border-none text-rede-surface' iconButtonClassName="border-none">
-                Contactar
-              </Button>
+              <>
+                {profileData.professionalPhone && (
+                  <Button icon={<PhoneIcon width={12} height={12} color='black' />} iconPosition='left' className='bg-rede-yellow border-none text-rede-surface' iconButtonClassName="border-none">
+                    Contactar
+                  </Button>
+                )}
+                <Button variant={"secondary"} disabled={isSaving} icon={<Edit2 width={12} height={12} />} iconPosition='left' onClick={() => setIsDataModalOpen(true)}>
+                  Editar dados
+                </Button>
+              </>
             ) : (
               <Link href={"tel:" + profileData.professionalPhone} target="_blank">
                 <StaticContactChip icon={<PhoneIcon width={12} height={12} />} variant="primary">
@@ -175,6 +194,15 @@ export const ShowProfile: React.FC<ShowProfileType> = ({
           </div>
         )}
       </div>
+
+      <EditDataModal
+        open={isDataModalOpen}
+        profile={profile}
+        profileData={profileData}
+        isSaving={isSaving}
+        onClose={() => setIsDataModalOpen(false)}
+        onSave={handleSaveData}
+      />
 
       <Modal open={isAvatarCropOpen} onClose={() => setIsAvatarCropOpen(false)} panelClassName="flex justify-center rounded-none border-[1.3px] border-rede-white/20">
         <ImageCropUploader

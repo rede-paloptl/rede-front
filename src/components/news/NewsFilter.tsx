@@ -2,20 +2,55 @@
 
 import { useMemo } from 'react'
 import { customBlur } from '@/app/fonts'
+import { getPublishedNews } from '@/actions/news'
+import { usePublicContent } from '@/hooks/usePublicContent'
 import { FilterSidebar } from './FilterSidebar'
 import { Heading } from '../ui/heading'
 import { ArticleCard } from '../ArticleCard'
-import { NEWS } from './data'
+import { ContentState } from '../ContentState'
 import { filterNews, getNewsYearOptions } from './actions'
 import { Text } from '../ui/text'
 import { useNewsFilters } from './useNewsFilters'
 
 const NewsFilterContent: React.FC = () => {
   const { filters, setFilters, clearFilters } = useNewsFilters()
+  const { data, isLoading, error, retry } = usePublicContent(getPublishedNews)
 
-  const yearOptions = useMemo(() => getNewsYearOptions(NEWS), [])
-  const results = useMemo(() => filterNews(NEWS, filters), [filters])
+  const news = useMemo(() => data ?? [], [data])
+  const yearOptions = useMemo(() => getNewsYearOptions(news), [news])
+  const results = useMemo(() => filterNews(news, filters), [news, filters])
 
+  const renderResults = () => {
+    if (isLoading) {
+      return <ContentState variant="loading" message="A carregar notícias…" className="flex-1 text-rede-white" />
+    }
+
+    if (error) {
+      return <ContentState variant="error" message={error} onRetry={retry} className="flex-1" />
+    }
+
+    if (news.length === 0) {
+      return <ContentState variant="empty" message="Ainda não há notícias publicadas." className="flex-1 text-rede-white" />
+    }
+
+    if (results.length === 0) {
+      return (
+        <ContentState
+          variant="empty"
+          message="Nenhuma notícia encontrada para os filtros selecionados."
+          className="flex-1 text-rede-white"
+        />
+      )
+    }
+
+    return (
+      <div className="grid min-w-0 flex-1 grid-cols-1 gap-4 px-4 pb-6 sm:grid-cols-2 sm:px-6 xl:grid-cols-3">
+        {results.map((item) => (
+          <ArticleCard key={item.id} newsData={item} />
+        ))}
+      </div>
+    )
+  }
 
   return (
     <section className="mt-12 h-auto w-full sm:mt-16 lg:mt-20">
@@ -30,12 +65,14 @@ const NewsFilterContent: React.FC = () => {
             notícias
           </Heading>
 
-          <div className="flex shrink-0 justify-end py-4 sm:px-6">
-            <Text className="text-[14px] leading-4">
-              {results.length}{' '}
-              {results.length === 1 ? 'resultado' : 'resultados'}
-            </Text>
-          </div>
+          {!isLoading && !error && (
+            <div className="flex shrink-0 justify-end py-4 sm:px-6">
+              <Text className="text-[14px] leading-4">
+                {results.length}{' '}
+                {results.length === 1 ? 'resultado' : 'resultados'}
+              </Text>
+            </div>
+          )}
         </div>
 
         <div className="mt-6 flex w-full min-w-0 flex-col lg:mt-10 lg:flex-row">
@@ -48,17 +85,7 @@ const NewsFilterContent: React.FC = () => {
             />
           </div>
 
-          {results.length > 0 ? (
-            <div className="grid min-w-0 flex-1 grid-cols-1 gap-4 px-4 pb-6 sm:grid-cols-2 sm:px-6 xl:grid-cols-3">
-              {results.map((news) => (
-                <ArticleCard key={news.id} newsData={news} />
-              ))}
-            </div>
-          ) : (
-            <div className="flex min-h-56 min-w-0 flex-1 items-center justify-center px-4 pb-6 text-center text-rede-white sm:px-6">
-              Nenhuma notícia encontrada para os filtros selecionados.
-            </div>
-          )}
+          {renderResults()}
         </div>
       </div>
     </section>

@@ -5,6 +5,7 @@ import { Heading } from "../ui/heading";
 import { customBlur } from "@/app/fonts";
 import { OpportunityType } from "../OpportunityCard";
 import { linkify } from "@/actions";
+import { formatPeriod } from "@/lib/dates";
 import { Link, Mail } from "lucide-react";
 import Facebook from "@/icons/Facebook";
 import { Text } from "../ui/text";
@@ -88,7 +89,7 @@ export const SectionViewOpportunity: React.FC<{ selectedOpportunity: Opportunity
                     ))}
 
                     <Text className="text-[12px] leading-[16px]">
-                        {`${selectedOpportunity?.startDate} - ${selectedOpportunity?.endDate}`}
+                        {formatPeriod(selectedOpportunity?.startDate, selectedOpportunity?.endDate)}
                     </Text>
                 </div>
 

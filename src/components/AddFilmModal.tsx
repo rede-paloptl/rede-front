@@ -6,7 +6,7 @@ import { Modal } from "./ui/modal";
 import { Input } from "./ui/Input";
 import { Button } from "./ui/button";
 import { Text } from "./ui/text";
-import { Select } from "./ui/select";
+import { InputSelect } from "./ui/input-select";
 import { ImageCropUploader } from "./ImageCropUploader";
 import { countriesList } from "./network/filters";
 import {
@@ -24,7 +24,7 @@ export type FilmFormData = {
   title: string;
   year: string;
   duration: string;
-  country: string;
+  countries: string[];
   theme: string;
   genre: string;
   roles: string[];
@@ -36,7 +36,7 @@ const EMPTY_FORM: FilmFormData = {
   title: "",
   year: "",
   duration: "",
-  country: "",
+  countries: [],
   theme: "",
   genre: "",
   roles: [],
@@ -48,24 +48,35 @@ const EMPTY_FORM: FilmFormData = {
 // limite vive aqui e e aplicado tanto ao adicionar como ao normalizar.
 const MAX_ROLES = 3;
 
-const requiredFields: Array<keyof FilmFormData> = [
+const requiredFields: Array<Exclude<keyof FilmFormData, "countries" | "roles">> = [
   "title",
   "year",
   "duration",
-  "country",
   "theme",
   "genre",
 ];
+
+const uniqueValues = (values: string[]) =>
+  Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
+
+// Dropdowns com pesquisa: o texto escrito filtra as opcoes, mas so uma opcao
+// da lista pode ser escolhida.
+const searchableSelectProps = {
+  variant: "secondary" as const,
+  allowFreeText: false,
+  emptyMessage: "Nenhum resultado",
+  popoverClassName: "[&>ul]:max-h-[250px]",
+};
 
 const normalizeFormData = (form: FilmFormData): FilmFormData => ({
   ...form,
   title: form.title.trim(),
   year: form.year.trim(),
   duration: form.duration.trim(),
-  country: form.country.trim(),
+  countries: uniqueValues(form.countries),
   theme: form.theme.trim(),
   genre: form.genre.trim(),
-  roles: Array.from(new Set(form.roles.map((role) => role.trim()).filter(Boolean))).slice(0, MAX_ROLES),
+  roles: uniqueValues(form.roles).slice(0, MAX_ROLES),
   link: form.link.trim() ? ensureHttps(form.link) : "",
 });
 
@@ -89,6 +100,30 @@ export const AddFilmModal: React.FC<FilmFormModalProps> = ({
   const [form, setForm] = useState<FilmFormData>({ ...EMPTY_FORM, ...initialData });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  // Os campos de "adicionar a lista" limpam o texto pesquisado depois de cada escolha.
+  const [countryPickerKey, setCountryPickerKey] = useState(0);
+  const [rolePickerKey, setRolePickerKey] = useState(0);
+
+  const availableCountryOptions = useMemo(
+    () => countriesList.filter((option) => !form.countries.includes(option.value)),
+    [form.countries],
+  );
+
+  const addCountry = (country: string) => {
+    if (country) {
+      setForm((prev) =>
+        prev.countries.includes(country) ? prev : { ...prev, countries: [...prev.countries, country] },
+      );
+    }
+
+    setCountryPickerKey((key) => key + 1);
+  };
+
+  const removeCountry = (country: string) =>
+    setForm((prev) => ({
+      ...prev,
+      countries: prev.countries.filter((item) => item !== country),
+    }));
 
   // A funcao segue as mesmas categorias das competencias: empresa usa as
   // categorias de empresa, individual as de profissionais. Uma pessoa pode
@@ -101,13 +136,15 @@ export const AddFilmModal: React.FC<FilmFormModalProps> = ({
   );
 
   const addRole = (role: string) => {
-    if (!role) return;
+    if (role) {
+      setForm((prev) =>
+        prev.roles.includes(role) || prev.roles.length >= MAX_ROLES
+          ? prev
+          : { ...prev, roles: [...prev.roles, role] },
+      );
+    }
 
-    setForm((prev) =>
-      prev.roles.includes(role) || prev.roles.length >= MAX_ROLES
-        ? prev
-        : { ...prev, roles: [...prev.roles, role] },
-    );
+    setRolePickerKey((key) => key + 1);
   };
 
   const removeRole = (role: string) =>
@@ -126,7 +163,7 @@ export const AddFilmModal: React.FC<FilmFormModalProps> = ({
       cover: form.cover || defaultCover || "",
     });
 
-    if (requiredFields.some((field) => !payload[field])) {
+    if (requiredFields.some((field) => !payload[field]) || payload.countries.length === 0) {
       setError("Preencha todos os campos obrigatórios do filme.");
       return;
     }
@@ -195,38 +232,56 @@ export const AddFilmModal: React.FC<FilmFormModalProps> = ({
           </div>
         </div>
 
+        <div className="flex flex-col gap-2">
+          <Text className="text-[16px] font-medium">Países</Text>
+
+          {form.countries.length > 0 && (
+            <div className="flex flex-wrap gap-2.5">
+              {form.countries.map((country) => (
+                <Tag key={country} className="flex gap-1 items-center">
+                  {getFilmTagLabel(country)}
+                  <X
+                    width={12}
+                    height={12}
+                    color="#ffffff"
+                    className="cursor-pointer"
+                    aria-label={`Remover ${getFilmTagLabel(country)}`}
+                    onClick={() => removeCountry(country)}
+                  />
+                </Tag>
+              ))}
+            </div>
+          )}
+
+          <InputSelect
+            key={countryPickerKey}
+            {...searchableSelectProps}
+            placeholder={form.countries.length > 0 ? "Adicionar outro país" : "Pesquisar e adicionar país"}
+            options={availableCountryOptions}
+            value=""
+            onChange={addCountry}
+          />
+        </div>
+
         <div className="flex justify-between gap-2">
           <div className="w-full flex flex-col gap-2">
-            <Text className="text-[16px] font-medium">País</Text>
-            <Select
-              placeholder="Selecionar país"
-              variant="secondary"
-              options={countriesList}
-              value={form.country}
-              onChange={(value) => update("country", value)}
-              popoverClassName="[&>ul]:max-h-[250px]"
-            />
-          </div>
-          <div className="w-full flex flex-col gap-2">
             <Text className="text-[16px] font-medium">Tema</Text>
-            <Select
-              placeholder="Selecionar tema"
-              variant="secondary"
+            <InputSelect
+              {...searchableSelectProps}
+              placeholder="Pesquisar tema"
               options={filmThemeOptions}
               value={form.theme}
               onChange={(value) => update("theme", value)}
-              popoverClassName="[&>ul]:max-h-[250px]"
             />
           </div>
           <div className="w-full flex flex-col gap-2">
             <Text className="text-[16px] font-medium">Gênero</Text>
-            <Select
-              placeholder="Selecionar gênero"
-              variant="secondary"
+            <InputSelect
+              {...searchableSelectProps}
+              placeholder="Pesquisar gênero"
               options={filmGenreOptions}
               value={form.genre}
               onChange={(value) => update("genre", value)}
-              popoverClassName="[&>ul]:max-h-[250px]"
             />
           </div>
         </div>
@@ -256,9 +311,10 @@ export const AddFilmModal: React.FC<FilmFormModalProps> = ({
           )}
 
 
-          <Select
-            placeholder="Selecionar função"
-            variant="secondary"
+          <InputSelect
+            key={rolePickerKey}
+            {...searchableSelectProps}
+            placeholder={form.roles.length >= MAX_ROLES ? "Limite de funções atingido" : "Pesquisar e adicionar função"}
             value=""
             options={availableRoleOptions}
             disabled={form.roles.length >= MAX_ROLES}

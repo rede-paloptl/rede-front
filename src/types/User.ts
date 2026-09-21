@@ -8,6 +8,8 @@ export type ProfileAchievement = {
     type: string;
     title: string;
     link?: string;
+    /** Filme da filmografia (ou fora da agência) a que esta entrada se refere. */
+    filmId?: string;
 };
 
 export type ProfileFilm = {

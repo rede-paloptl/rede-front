@@ -62,6 +62,8 @@ const variantStyles = {
 export interface SelectOption {
   value: string
   label: string
+  // Número opcional mostrado à direita da opção (ex.: resultados por filtro).
+  count?: number
 }
 
 // Os selects não têm botão próprio para desmarcar, por isso a opção de repor
@@ -74,6 +76,15 @@ export const withClearOption = (
   label: string,
 ): SelectOption[] =>
   selectedValue ? [{ label, value: '' }, ...options] : options
+
+// Variante para filtros em que "todos" é um estado de pleno direito e não a
+// ausência de escolha: a opção fica sempre no topo e, com o valor vazio, é ela
+// que aparece no trigger (com o visto) em vez do placeholder.
+export const withAllOption = (
+  options: SelectOption[],
+  label: string,
+  count?: number,
+): SelectOption[] => [{ label, value: '', count }, ...options]
 
 export interface SelectProps {
   options: SelectOption[]
@@ -156,6 +167,15 @@ export const Select = ({
 
   const popoverRef = React.useRef<HTMLDivElement>(null)
 
+  React.useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsOpen(false)
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen])
+
 
   return (
     <div ref={containerRef} className={cn('relative inline-flex flex-col w-full gap-2', className)}>
@@ -165,6 +185,8 @@ export const Select = ({
         <button
           type="button"
           disabled={disabled}
+          aria-haspopup="listbox"
+          aria-expanded={isOpen}
           onClick={() => setIsOpen(!isOpen)}
           className={cn(
             selectTriggerVariants({ size }),
@@ -181,6 +203,9 @@ export const Select = ({
         <button
           type="button"
           disabled={disabled}
+          // Repete o trigger: fora da ordem de tabulação e do leitor de ecrã.
+          tabIndex={-1}
+          aria-hidden="true"
           onClick={() => setIsOpen(!isOpen)}
           className={cn(
             satelliteVariants({ size }),
@@ -204,19 +229,28 @@ export const Select = ({
             v.popover,
           )}
         >
-          <ul className="max-h-80 overflow-y-auto space-y-1
+          <ul role="listbox" className="max-h-80 overflow-y-auto space-y-1
       [&::-webkit-scrollbar]:w-2
       [&::-webkit-scrollbar]:h-3
       [&::-webkit-scrollbar-track]:bg-transparent
       [&::-webkit-scrollbar-thumb]:bg-rede-yellow
       [&::-webkit-scrollbar-thumb]:rounded-full
     ">
-            {options.map((option) => {
+            {options.map((option, index) => {
               const isSelected = option.value === value
+              // A opção de repor ("Todos...") fica separada das escolhas concretas.
+              const isResetOption =
+                index === 0 && option.value === '' && options.length > 1
               return (
-                <li key={option.value}>
+                <li
+                  key={option.value}
+                  role="presentation"
+                  className={cn(isResetOption && 'border-b border-white/10 pb-1')}
+                >
                   <button
                     type="button"
+                    role="option"
+                    aria-selected={isSelected}
                     onClick={() => {
                       if (onChange) onChange(option.value)
                       setIsOpen(false)
@@ -227,9 +261,21 @@ export const Select = ({
                       isSelected && v.selected,
                     )}
                   >
-                    <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center justify-between gap-3 w-full">
                       <span>{option.label}</span>
-                      {isSelected && <Check width={16} height={16} />}
+                      <span className="flex shrink-0 items-center gap-2">
+                        {option.count !== undefined && (
+                          <span
+                            className={cn(
+                              'text-[12px] tabular-nums',
+                              isSelected ? 'opacity-70' : 'text-rede-white/40',
+                            )}
+                          >
+                            {option.count}
+                          </span>
+                        )}
+                        {isSelected && <Check width={16} height={16} />}
+                      </span>
                     </div>
                   </button>
                 </li>

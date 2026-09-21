@@ -49,3 +49,33 @@ export function filterProfiles(
     return true
   })
 }
+
+export type ProfileTypeCounts = {
+  total: number
+  byType: Record<string, number>
+}
+
+// Quantos perfis cada opção do filtro de tipo devolveria. Mudar de tipo limpa
+// a categoria e a sub-categoria (ver handleTypeChange), por isso contam-se os
+// perfis que passam em todos os outros filtros, ignorando esses três.
+export function countProfilesByType(
+  profiles: ProfileType[],
+  filters: NetworkFilters,
+): ProfileTypeCounts {
+  const matches = filterProfiles(profiles, {
+    ...filters,
+    type: '',
+    category: '',
+    subCategory: '',
+  })
+
+  const byType: Record<string, number> = {}
+
+  for (const profile of matches) {
+    if (!profile.type) continue
+
+    byType[profile.type] = (byType[profile.type] ?? 0) + 1
+  }
+
+  return { total: matches.length, byType }
+}

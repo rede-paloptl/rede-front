@@ -2,6 +2,7 @@
 
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { formatPeriod } from "@/lib/dates";
 import { Button } from "./ui/button";
 import { Heading } from "./ui/heading";
 import { Text } from "./ui/text";
@@ -29,13 +30,13 @@ export const OpportunityCard: React.FC<{ opportunityData: OpportunityType }> = (
     <Card
       image={
         <Link href={"/opportunity-details?id=" + opportunityData.id} className="cursor-pointer">
-          <img src={opportunityData.cover} className="w-full h-full object-cover" alt="Diretora no set de filmagem" />
+          <img src={opportunityData.cover || "/assets/opportunities/hero.jpg"} className="w-full h-full object-cover" alt="Diretora no set de filmagem" />
         </Link>
       }
       footer={
         <div className="w-full h-12 flex items-center justify-between gap-4 mt-2">
           <Text className="text-[12px] leading-relaxed font-medium line-clamp-2">
-            {`${opportunityData?.startDate} - ${opportunityData.endDate}`}
+            {formatPeriod(opportunityData?.startDate, opportunityData?.endDate)}
           </Text>
 
           <Link href={"/opportunity-details?id=" + opportunityData.id} className="cursor-pointer">

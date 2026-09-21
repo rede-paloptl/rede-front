@@ -30,6 +30,11 @@ type ImageCropUploaderProps = {
 // O recorte sai sempre em JPEG: uma foto de 1200px fica bem abaixo do limite
 // de 2MB da API, o que em PNG nao e garantido.
 const OUTPUT_TYPE = "image/jpeg";
+
+// Mesmo limite da API (rede-back, MAX_UPLOAD_SIZE_MB): verificado logo ao
+// escolher o ficheiro, para a pessoa saber antes de recortar.
+export const MAX_IMAGE_SIZE_MB = 2;
+const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
 const OUTPUT_QUALITY = 0.9;
 const OUTPUT_BACKGROUND = "#1D1D1B";
 
@@ -120,8 +125,16 @@ export const ImageCropUploader: React.FC<ImageCropUploaderProps> = ({
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Permite voltar a escolher o mesmo ficheiro depois de uma recusa.
+    event.target.value = "";
+
     if (!file.type.startsWith("image/")) {
       onError?.("O arquivo deve ser uma imagem.");
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      onError?.(`A imagem tem ${(file.size / (1024 * 1024)).toFixed(1)} MB. O tamanho máximo é ${MAX_IMAGE_SIZE_MB} MB.`);
       return;
     }
 
@@ -245,15 +258,21 @@ export const ImageCropUploader: React.FC<ImageCropUploaderProps> = ({
         <Text className="w-1/2 text-[12px] leading-4 text-rede-white/30">{helperText}</Text>
       </div>
 
-      <div className="flex justify-end gap-2">
-        {previewUrl && (
-          <Button variant="secondary" disabled={disabled || isUploading} onClick={() => fileInputRef.current?.click()}>
-            Trocar imagem
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Text className="text-[12px] leading-4 text-rede-white/50">
+          Tamanho máximo: {MAX_IMAGE_SIZE_MB} MB
+        </Text>
+
+        <div className="flex flex-wrap justify-end gap-2">
+          {previewUrl && (
+            <Button variant="secondary" disabled={disabled || isUploading} onClick={() => fileInputRef.current?.click()}>
+              Trocar imagem
+            </Button>
+          )}
+          <Button disabled={disabled || isUploading} icon={<Upload width={12} height={12} />} iconPosition="left" onClick={handleUpload}>
+            {isUploading ? uploadingLabel : uploadLabel}
           </Button>
-        )}
-        <Button disabled={disabled || isUploading} icon={<Upload width={12} height={12} />} iconPosition="left" onClick={handleUpload}>
-          {isUploading ? uploadingLabel : uploadLabel}
-        </Button>
+        </div>
       </div>
     </div>
   );

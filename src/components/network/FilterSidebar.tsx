@@ -7,7 +7,8 @@ import { SearchIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Heading } from '../ui/heading'
 import { Input } from '../ui/Input'
-import { Select, withClearOption } from '../ui/select'
+import { Select, withAllOption } from '../ui/select'
+import type { ProfileTypeCounts } from './actions'
 import { countriesList, normalizeLabelKey, SelectItemType } from './filters'
 import {
   categoriesByType,
@@ -43,6 +44,8 @@ type NetworkFilterKey = keyof NetworkFilters
 
 type FilterSidebarProps = {
   filters: NetworkFilters
+  // Resultados por tipo; ausente enquanto os perfis nao carregam.
+  typeCounts?: ProfileTypeCounts
   onFiltersChange: (filters: NetworkFilters) => void
   onClear: () => void
 }
@@ -404,6 +407,7 @@ export const getNetworkTagHref = (tag: string) => {
 
 export const FilterSidebar: React.FC<FilterSidebarProps> = ({
   filters,
+  typeCounts,
   onFiltersChange,
   onClear,
 }) => {
@@ -446,10 +450,21 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
 
   const hasSubCategories = subCategoryOptions.length > 0
 
-  const categoryPlaceholder =
+  const typeOptions = withAllOption(
+    typeCounts
+      ? profileTypesList.map((option) => ({
+          ...option,
+          count: typeCounts.byType[option.value] ?? 0,
+        }))
+      : profileTypesList,
+    'Todos os tipos',
+    typeCounts?.total,
+  )
+
+  const categoryAllLabel =
     selectedType === 'profissionais'
-      ? 'Selecione a profissão'
-      : 'Selecione a categoria'
+      ? 'Todas as profissões'
+      : 'Todas as categorias'
 
   const subCategoryPlaceholder = hasSubCategories
     ? 'Selecione a sub-categoria'
@@ -580,11 +595,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
             variant="primary"
             value={selectedCountry}
             placeholder="Selecione o país"
-            options={withClearOption(
-              countriesList,
-              selectedCountry,
-              'Todos os países',
-            )}
+            options={withAllOption(countriesList, 'Todos os países')}
             triggerClassName={selectTriggerClassName}
             popoverClassName={selectPopoverClassName}
             satelliteClassName="border-[1.3px] border-white"
@@ -601,11 +612,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
             variant="primary"
             value={selectedProvince}
             placeholder="Selecione a província"
-            options={withClearOption(
-              provinceOptions,
-              selectedProvince,
-              'Todas as províncias',
-            )}
+            options={withAllOption(provinceOptions, 'Todas as províncias')}
             triggerClassName={selectTriggerClassName}
             popoverClassName={selectPopoverClassName}
             satelliteClassName="border-[1.3px] border-white"
@@ -622,11 +629,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
             variant="primary"
             value={selectedCity}
             placeholder="Selecione a localidade"
-            options={withClearOption(
-              cityOptions,
-              selectedCity,
-              'Todas as localidades',
-            )}
+            options={withAllOption(cityOptions, 'Todas as localidades')}
             triggerClassName={selectTriggerClassName}
             popoverClassName={selectPopoverClassName}
             satelliteClassName="border-[1.3px] border-white"
@@ -643,11 +646,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
             variant="primary"
             value={selectedType}
             placeholder="Selecione o tipo"
-            options={withClearOption(
-              profileTypesList,
-              selectedType,
-              'Todos os tipos',
-            )}
+            options={typeOptions}
             triggerClassName={selectTriggerClassName}
             popoverClassName={selectPopoverClassName}
             satelliteClassName="border-[1.3px] border-white"
@@ -663,12 +662,8 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
           <Select
             variant="primary"
             value={selectedCategory}
-            placeholder={categoryPlaceholder}
-            options={withClearOption(
-              categoryOptions,
-              selectedCategory,
-              'Todas as categorias',
-            )}
+            placeholder={categoryAllLabel}
+            options={withAllOption(categoryOptions, categoryAllLabel)}
             triggerClassName={selectTriggerClassName}
             popoverClassName={selectPopoverClassName}
             satelliteClassName="border-[1.3px] border-white"
@@ -686,11 +681,13 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
             value={selectedSubCategory}
             placeholder={subCategoryPlaceholder}
             disabled={!hasSubCategories}
-            options={withClearOption(
-              subCategoryOptions,
-              selectedSubCategory,
-              'Todas as sub-categorias',
-            )}
+            // Sem sub-categorias o campo fica desactivado e o placeholder
+            // explica porque; um "Todas" ali seria enganador.
+            options={
+              hasSubCategories
+                ? withAllOption(subCategoryOptions, 'Todas as sub-categorias')
+                : []
+            }
             triggerClassName={selectTriggerClassName}
             popoverClassName={selectPopoverClassName}
             satelliteClassName="border-[1.3px] border-white"

@@ -38,8 +38,8 @@ import {
     signup,
     SignupResponseType,
 } from "@/actions/authentication";
+import type { SignupPayload } from "@/actions/authentication";
 
-import { User } from "@/types/User";
 import { eraseCookie } from "@/actions/cookie";
 
 
@@ -48,7 +48,7 @@ export interface AuthInterface {
     isAuthenticated: boolean;
     loading: boolean;
 
-    sigNup: (user: User) => Promise<SignupResponseType>;
+    sigNup: (user: SignupPayload) => Promise<SignupResponseType>;
 
     signInUsingEmailAndPassword: (
         email: string,
@@ -155,7 +155,7 @@ export const AuthProvider = ({
     /**
      * Signup.
      */
-    const sigNup = async (sigNupData: User): Promise<SignupResponseType> => {
+    const sigNup = async (sigNupData: SignupPayload): Promise<SignupResponseType> => {
         const response = await signup(sigNupData);
         return response;
     }

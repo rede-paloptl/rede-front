@@ -1,11 +1,15 @@
+"use client";
 
 import { customBlur } from "@/app/fonts";
 import { Heading } from "@/components/ui/heading";
+import { getPublishedNews } from "@/actions/news";
+import { usePublicContent } from "@/hooks/usePublicContent";
 import { ArticleCard } from "../ArticleCard";
-import { NEWS } from "../news/data";
+import { ContentState } from "../ContentState";
 
 
 export const AssociatedNews: React.FC = () => {
+    const { data: news, isLoading, error, retry } = usePublicContent(getPublishedNews);
 
 
     return (
@@ -17,9 +21,17 @@ export const AssociatedNews: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {NEWS.map((news, index) => (
-                        <ArticleCard newsData={news} key={"vintus" + index} />
-                    ))}
+                    {isLoading ? (
+                        <ContentState variant="loading" message="A carregar notícias…" className="text-rede-white" />
+                    ) : error ? (
+                        <ContentState variant="error" message={error} onRetry={retry} />
+                    ) : !news || news.length === 0 ? (
+                        <ContentState variant="empty" message="Ainda não há notícias publicadas." className="text-rede-white" />
+                    ) : (
+                        news.slice(0, 3).map((item) => (
+                            <ArticleCard newsData={item} key={item.id} />
+                        ))
+                    )}
                 </div>
 
             </div>
