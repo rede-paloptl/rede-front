@@ -27,16 +27,35 @@ type ImageCropUploaderProps = {
   onError?: (message: string) => void;
 };
 
-// O recorte sai sempre em JPEG: uma foto de 1200px fica bem abaixo do limite
-// de 2MB da API, o que em PNG nao e garantido.
+// O recorte sai sempre em JPEG (PNG nao tem tamanho garantido). So o recorte
+// e enviado: a foto original nunca sai do browser.
 const OUTPUT_TYPE = "image/jpeg";
 
-// Mesmo limite da API (rede-back, MAX_UPLOAD_SIZE_MB): verificado logo ao
-// escolher o ficheiro, para a pessoa saber antes de recortar.
-export const MAX_IMAGE_SIZE_MB = 2;
+// A original so e lida pelo browser, por isso pode ser grande (fotos de
+// telemovel tem 3-8MB).
+export const MAX_IMAGE_SIZE_MB = 15;
 const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
-const OUTPUT_QUALITY = 0.9;
+
+// Alvo do ficheiro enviado. A qualidade desce aos poucos ate caber; a API
+// continua a recusar acima de 2MB (rede-back, MAX_UPLOAD_SIZE_MB).
+const TARGET_OUTPUT_BYTES = 500 * 1024;
+const OUTPUT_QUALITIES = [0.85, 0.78, 0.7, 0.6];
+
+// A foto de perfil aparece pequena (circulo): 600px chegam.
+const OUTPUT_WIDTH_BY_PURPOSE: Record<ImageCropUploaderProps["purpose"], number> = {
+  "profile-image": 600,
+  "cover-image": 1200,
+  film: 1200,
+};
 const OUTPUT_BACKGROUND = "#1D1D1B";
+
+const canvasToJpeg = (canvas: HTMLCanvasElement, quality: number) =>
+  new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((result) => {
+      if (result) resolve(result);
+      else reject(new Error("Não foi possível gerar a imagem recortada."));
+    }, OUTPUT_TYPE, quality);
+  });
 
 const toJpegFileName = (fileName: string) =>
   `${fileName.replace(/\.[^.]+$/, "") || "imagem"}.jpg`;
@@ -47,6 +66,7 @@ const createCroppedFile = async (
   zoom: number,
   position: CropPosition,
   aspectRatio: number,
+  outputWidth: number,
 ) => {
   const image = new Image();
   image.crossOrigin = "anonymous";
@@ -57,7 +77,6 @@ const createCroppedFile = async (
     image.src = imageUrl;
   });
 
-  const outputWidth = 1200;
   const outputHeight = Math.round(outputWidth / aspectRatio);
   const canvas = document.createElement("canvas");
   canvas.width = outputWidth;
@@ -79,12 +98,12 @@ const createCroppedFile = async (
   context.fillRect(0, 0, outputWidth, outputHeight);
   context.drawImage(image, -offsetX, -offsetY, renderedWidth, renderedHeight);
 
-  const blob = await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((result) => {
-      if (result) resolve(result);
-      else reject(new Error("Não foi possível gerar a imagem recortada."));
-    }, OUTPUT_TYPE, OUTPUT_QUALITY);
-  });
+  let blob = await canvasToJpeg(canvas, OUTPUT_QUALITIES[0]);
+
+  for (const quality of OUTPUT_QUALITIES.slice(1)) {
+    if (blob.size <= TARGET_OUTPUT_BYTES) break;
+    blob = await canvasToJpeg(canvas, quality);
+  }
 
   return new File([blob], toJpegFileName(fileName), { type: OUTPUT_TYPE });
 };
@@ -179,7 +198,14 @@ export const ImageCropUploader: React.FC<ImageCropUploaderProps> = ({
     onError?.("");
 
     try {
-      const croppedFile = await createCroppedFile(previewUrl, selectedFile.name, zoom, position, aspectRatio);
+      const croppedFile = await createCroppedFile(
+        previewUrl,
+        selectedFile.name,
+        zoom,
+        position,
+        aspectRatio,
+        OUTPUT_WIDTH_BY_PURPOSE[purpose],
+      );
       const response = await uploadFile(croppedFile, purpose);
       const url = response.data?.file.publicUrl;
 

@@ -6,9 +6,18 @@ import type { NextConfig } from "next";
 const r2PublicUrl = process.env.R2_PUBLIC_URL?.trim();
 const r2PublicHostname = r2PublicUrl ? new URL(r2PublicUrl).hostname : null;
 
+// Em desenvolvimento a API guarda os uploads no disco e serve-os em
+// http://localhost:4001/uploads (STORAGE_DRIVER=local no rede-back).
+const isDev = process.env.NODE_ENV === 'development';
+
 const nextConfig: NextConfig = {
   images: {
+    // O Next 16 recusa optimizar imagens de enderecos locais por omissao.
+    dangerouslyAllowLocalIP: isDev,
     remotePatterns: [
+      ...(isDev
+        ? [{ protocol: 'http' as const, hostname: 'localhost', port: '4001', pathname: '/uploads/**' }]
+        : []),
       {
         protocol: 'https',
         hostname: 'example.com',
