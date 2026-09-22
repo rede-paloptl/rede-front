@@ -6,7 +6,7 @@ import { customBlur } from "@/app/fonts";
 import { OpportunityType } from "../OpportunityCard";
 import { linkify } from "@/actions";
 import { formatPeriod } from "@/lib/dates";
-import { Link, Mail } from "lucide-react";
+import { ArrowUpRight, Link, Mail } from "lucide-react";
 import Facebook from "@/icons/Facebook";
 import { Text } from "../ui/text";
 import { Tag } from "../ui/tag";
@@ -73,6 +73,11 @@ export const SectionViewOpportunity: React.FC<{ selectedOpportunity: Opportunity
     };
 
     const status = statusTags[selectedOpportunity?.status];
+    const applyLink = selectedOpportunity?.applyLink?.trim();
+
+    const handleApply = () => {
+        if (applyLink) window.open(applyLink, "_blank", "noopener,noreferrer");
+    };
 
     return (
         <div className="w-full max-w-350 h-auto mr-auto ml-auto pt-16 pb-16 bg-rede-bg">
@@ -141,7 +146,7 @@ export const SectionViewOpportunity: React.FC<{ selectedOpportunity: Opportunity
                 />
             </div>
 
-            <div className="w-full flex gap-2.5 border-t-[1.3px] border-rede-white pt-12.5">
+            <div className="w-full flex flex-wrap items-center gap-2.5 border-t-[1.3px] border-rede-white pt-12.5">
                 <Button variant={"secondary"} icon={<Link width={12} height={12} color="white" />} iconPosition="left" onClick={handleCopyLink}>
                     {copied ? "Copiado!" : "Copiar link"}
                 </Button>
@@ -151,6 +156,18 @@ export const SectionViewOpportunity: React.FC<{ selectedOpportunity: Opportunity
                 <Button variant={"secondary"} icon={<Mail width={12} height={12} color="white" />} iconPosition="left" onClick={handleShareEmail}>
                     E-mail
                 </Button>
+
+                {/* Só no fim, depois de lida a oportunidade; sem link não há botão. */}
+                {applyLink && (
+                    <Button
+                        containerClassName="ml-auto"
+                        icon={<ArrowUpRight width={12} height={12} />}
+                        iconPosition="right"
+                        onClick={handleApply}
+                    >
+                        Candidatar-me
+                    </Button>
+                )}
             </div>
         </div>
     )

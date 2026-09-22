@@ -16,6 +16,8 @@ export type OpportunityType = {
   description: string;
   isAvailable: boolean;
   status: "open" | "starting" | "expired";
+  /** Ausente (null) nas oportunidades criadas antes deste campo. */
+  format?: "in-person" | "remote" | "hybrid" | null;
   startDate: string;
   endDate: string;
   type: string;
@@ -23,6 +25,8 @@ export type OpportunityType = {
   themes?: string[];
   country: string;
   cover: string;
+  /** Onde o visitante se candidata; sem link o botão não aparece. */
+  applyLink?: string | null;
 }
 
 export const OpportunityCard: React.FC<{ opportunityData: OpportunityType }> = ({ opportunityData }) => {
