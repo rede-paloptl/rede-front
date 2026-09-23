@@ -1,10 +1,13 @@
-FROM node:22-alpine AS dependencies
+FROM node:22-alpine AS base
+RUN corepack disable && npm install --global yarn@1.22.22
+
+FROM base AS dependencies
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
 COPY package.json yarn.lock ./
-RUN corepack enable && yarn install --frozen-lockfile
+RUN yarn install --non-interactive --network-timeout 300000
 
-FROM node:22-alpine AS builder
+FROM base AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=dependencies /app/node_modules ./node_modules
@@ -17,7 +20,7 @@ ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=$NEXT_PUBLIC_GOOGLE_CLIENT_ID
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 ENV R2_PUBLIC_URL=$R2_PUBLIC_URL
-RUN corepack enable && yarn build
+RUN yarn build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
