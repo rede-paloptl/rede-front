@@ -8,7 +8,12 @@ export type ConfirmationBaseUrlPayload = {
   confirmationBaseUrl?: string;
 }
 
-export type SignupPayload = User & ConfirmationBaseUrlPayload;
+export type SignupPayload = User & ConfirmationBaseUrlPayload & {
+  // Presente quando loginType === "google"; o backend verifica-o.
+  idToken?: string;
+  // Cloudflare Turnstile, exigido no signup por email.
+  turnstileToken?: string;
+};
 
 const getRequestBaseUrl = async () => {
   try {
@@ -92,9 +97,26 @@ export const signup = async (user: SignupPayload): Promise<SignupResponseType> =
       data: undefined
     };
   } catch (err: any) {
+    const data = err.response?.data;
+    console.error("[signup] falhou:", err.response?.status ?? err.code, data ?? err.message);
+
+    // Sem resposta = a API nao respondeu (desligada / URL errada).
+    if (!err.response) {
+      return {
+        error: "NETWORK_ERROR",
+        message: "Não foi possível ligar ao servidor. Tente novamente dentro de instantes."
+      }
+    }
+
+    const fieldErrors = Array.isArray(data?.details)
+      ? data.details.map((detail: { field?: string; message?: string }) => detail.field || detail.message).filter(Boolean).join(", ")
+      : "";
+
     return {
-      error: err.response?.data?.error || "Erro desconhecido",
-      message: err.response?.data?.message || "Não foi possível realizar o cadastro"
+      error: data?.error || "Erro desconhecido",
+      message: data?.message
+        ? fieldErrors ? `${data.message} (${fieldErrors})` : data.message
+        : "Não foi possível realizar o cadastro"
     }
   }
 }
@@ -159,9 +181,9 @@ export type LoginUsingEmailAndPassResponseType = {
   error?: string;
 }
 
-export const loginUsingEmailAndPassword = async (email: string, password: string): Promise<LoginUsingEmailAndPassResponseType> => {
+export const loginUsingEmailAndPassword = async (email: string, password: string, turnstileToken?: string): Promise<LoginUsingEmailAndPassResponseType> => {
   try {
-    const responseData = await api.post<LoginUsingEmailAndPassResponseType>("/api/v1/auth/login-using-email-and-password", { email, password }, {
+    const responseData = await api.post<LoginUsingEmailAndPassResponseType>("/api/v1/auth/login-using-email-and-password", { email, password, turnstileToken: turnstileToken || undefined }, {
       headers: await getClientForwardHeaders(),
     });
     const { data: user, token } = responseData.data as LoginUsingEmailAndPassResponseType & { data?: LoggedUser };

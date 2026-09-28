@@ -53,7 +53,8 @@ export interface AuthInterface {
 
     signInUsingEmailAndPassword: (
         email: string,
-        password: string
+        password: string,
+        turnstileToken?: string
     ) => Promise<LoginUsingEmailAndPassResponseType>;
 
     signInUsingGoogle: (
@@ -165,8 +166,8 @@ export const AuthProvider = ({
     /**
      * Login.
      */
-    const signInUsingEmailAndPassword = async (email: string, password: string) => {
-        const response = await loginUsingEmailAndPassword(email, password);
+    const signInUsingEmailAndPassword = async (email: string, password: string, turnstileToken?: string) => {
+        const response = await loginUsingEmailAndPassword(email, password, turnstileToken);
 
         if (response?.user && response?.token) {
             updaInternalDataState({ profileData: response.user, token: response.token });

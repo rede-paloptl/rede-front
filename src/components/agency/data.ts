@@ -1,12 +1,7 @@
-import { SelectItemType } from '../network/filters'
 import { FilmType } from './Films'
 
-export const filmGenres: SelectItemType[] = [
-  { label: 'Animação', value: 'animacao' },
-  { label: 'Documentário', value: 'documentario' },
-  { label: 'Experimental', value: 'experimental' },
-  { label: 'Ficção', value: 'ficcao' }
-]
+// Os géneros e os países dos filmes vêm das listas de Configurações
+// (lib/taxonomy): os filmes abaixo guardam o slug, que a taxonomia reconhece.
 
 
 export const licensingItems = [

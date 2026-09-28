@@ -1,5 +1,5 @@
 import { OpportunityType } from '../OpportunityCard'
-import { newsSubCategories } from '../news/data'
+import { getContentThemesByCategory } from '../news/categories'
 import { normalizeNewsValue } from '../news/actions'
 
 export type OpportunityFilters = {
@@ -26,9 +26,7 @@ const opportunityMatchesCategory = (
   const normalizedCategory = normalizeNewsValue(category)
   const themes = normalizedThemes(opportunity)
   const categorySubCategories =
-    newsSubCategories[category as keyof typeof newsSubCategories]?.map(
-      normalizeNewsValue,
-    ) ?? []
+    getContentThemesByCategory()[category]?.map(normalizeNewsValue) ?? []
 
   return (
     normalizeNewsValue(opportunity.type) === normalizedCategory ||

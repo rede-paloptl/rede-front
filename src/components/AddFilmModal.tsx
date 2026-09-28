@@ -8,12 +8,12 @@ import { Button } from "./ui/button";
 import { Text } from "./ui/text";
 import { InputSelect } from "./ui/input-select";
 import { ImageCropUploader } from "./ImageCropUploader";
-import { countriesList } from "./network/filters";
+import { getTaxonomy } from "@/lib/taxonomy";
 import {
-  filmGenreOptions,
-  filmThemeOptions,
   getCategoriesByAccountType,
+  getFilmGenreOptions,
   getFilmTagLabel,
+  getFilmThemeOptions,
 } from "./network/data";
 import { AccountType } from "@/types/User";
 import { Tag } from "./ui/tag";
@@ -68,6 +68,18 @@ const searchableSelectProps = {
   popoverClassName: "[&>ul]:max-h-[250px]",
 };
 
+const toFormIds = (form: FilmFormData): FilmFormData => {
+  const taxonomy = getTaxonomy();
+
+  return {
+    ...form,
+    countries: form.countries.map((country) => taxonomy.id(country, ["country"])),
+    theme: form.theme ? taxonomy.id(form.theme, ["film-theme"]) : "",
+    genre: form.genre ? taxonomy.id(form.genre, ["film-genre"]) : "",
+    roles: form.roles.map((role) => taxonomy.id(role, ["profile-category", "profile-subcategory"])),
+  };
+};
+
 const normalizeFormData = (form: FilmFormData): FilmFormData => ({
   ...form,
   title: form.title.trim(),
@@ -97,7 +109,8 @@ export const AddFilmModal: React.FC<FilmFormModalProps> = ({
   defaultCover,
   accountType,
 }) => {
-  const [form, setForm] = useState<FilmFormData>({ ...EMPTY_FORM, ...initialData });
+  // Filmes antigos podem ter slugs em vez de ids: o formulario usa sempre ids.
+  const [form, setForm] = useState<FilmFormData>(() => toFormIds({ ...EMPTY_FORM, ...initialData }));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   // Os campos de "adicionar a lista" limpam o texto pesquisado depois de cada escolha.
@@ -105,7 +118,7 @@ export const AddFilmModal: React.FC<FilmFormModalProps> = ({
   const [rolePickerKey, setRolePickerKey] = useState(0);
 
   const availableCountryOptions = useMemo(
-    () => countriesList.filter((option) => !form.countries.includes(option.value)),
+    () => getTaxonomy().countriesList.filter((option) => !form.countries.includes(option.value)),
     [form.countries],
   );
 
@@ -269,7 +282,7 @@ export const AddFilmModal: React.FC<FilmFormModalProps> = ({
             <InputSelect
               {...searchableSelectProps}
               placeholder="Pesquisar tema"
-              options={filmThemeOptions}
+              options={getFilmThemeOptions()}
               value={form.theme}
               onChange={(value) => update("theme", value)}
             />
@@ -279,7 +292,7 @@ export const AddFilmModal: React.FC<FilmFormModalProps> = ({
             <InputSelect
               {...searchableSelectProps}
               placeholder="Pesquisar gênero"
-              options={filmGenreOptions}
+              options={getFilmGenreOptions()}
               value={form.genre}
               onChange={(value) => update("genre", value)}
             />

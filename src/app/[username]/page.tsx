@@ -9,11 +9,13 @@ import { SITE_NAME, SITE_URL, toMetaDescription } from "@/lib/site";
 import type { User } from "@/types/User";
 import { ScrollToTop } from "./ScrollToTop";
 import {
+  getCityLabel,
   getCountry,
   getDisplayName,
   getProfileHeadline,
   getProfileImage,
   getPublicProfile,
+  getSkillLabels,
   normalizeUsername,
   reservedRoutes,
 } from "./profile";
@@ -103,7 +105,8 @@ const buildJsonLd = (profile: User, username: string) => {
     }
   });
 
-  const skills = [...(profileData?.coreSkills ?? []), ...(profileData?.skills ?? [])];
+  const skills = getSkillLabels([...(profileData?.coreSkills ?? []), ...(profileData?.skills ?? [])]);
+  const city = getCityLabel(profileData?.city);
 
   const entity = {
     "@type": isCompany ? "Organization" : "Person",
@@ -120,11 +123,11 @@ const buildJsonLd = (profile: User, username: string) => {
     description: toMetaDescription(profileData?.bio, 300) || undefined,
     ...(!isCompany && profileData?.profession ? { jobTitle: profileData.profession } : {}),
     ...(skills.length ? { knowsAbout: Array.from(new Set(skills)) } : {}),
-    ...(profileData?.city || country
+    ...(city || country
       ? {
           address: {
             "@type": "PostalAddress",
-            addressLocality: profileData?.city || undefined,
+            addressLocality: city || undefined,
             addressCountry: country?.code ?? country?.name,
           },
         }

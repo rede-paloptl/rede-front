@@ -5,7 +5,8 @@ import { Text } from "../ui/text";
 import { FormEvent, useMemo, useState } from "react";
 import Link from "next/link";
 import { Select } from "../ui/select";
-import { countries, services, socialFields } from "./data";
+import { socialFields } from "./data";
+import { getTaxonomy } from "@/lib/taxonomy";
 import { SelectMultiple } from "../ui/select-multiple";
 import { SocialNetwork } from "@/types/Profile";
 import { User } from "@/types/User";
@@ -17,15 +18,6 @@ import { useRouter } from "next/navigation";
 
 type ProfileData = User["profileData"];
 type OnboardingUser = Partial<Omit<User, "profileData">> & { profileData?: Partial<ProfileData> | null };
-// Valores tal como a API os guarda (sem acentos). O que o utilizador ve e a
-// label de data.ts ("Moçambique"); isto e so o valor transmitido.
-type ApiCountry =
-    | "Angola"
-    | "Cabo Verde"
-    | "Guine-Bissau"
-    | "Mocambique"
-    | "Sao Tome e Principe"
-    | "Timor-Leste";
 type MiniStepKey = "identity" | "contact" | "association" | "services" | "social";
 type MiniStep = {
     key: MiniStepKey;
@@ -67,21 +59,9 @@ const formatDateField = (value?: string | Date) => {
 
     return String(value).slice(0, 10);
 };
-const apiCountryByFormValue: Record<string, ApiCountry> = {
-    angola: "Angola",
-    "cabo-verde": "Cabo Verde",
-    "guine-bissau": "Guine-Bissau",
-    mocambique: "Mocambique",
-    "sao-tome-principe": "Sao Tome e Principe",
-    "timor-leste": "Timor-Leste",
-};
-const formCountryByApiValue = Object.entries(apiCountryByFormValue).reduce<Record<string, string>>(
-    (countriesByApiValue, [formValue, apiValue]) => ({
-        ...countriesByApiValue,
-        [apiValue]: formValue,
-    }),
-    {}
-);
+// País, cidade e serviços usam os ids das listas geridas no painel
+// (Configurações). Um registo antigo pode ter o nome: converte-se ao abrir.
+const isKnownCountry = (value: string) => getTaxonomy().countriesList.some((country) => country.value === value);
 const isValidUrl = (value: string) => {
     try {
         new URL(value);
@@ -106,7 +86,6 @@ const sanitizeProfileData = (profileData: ProfileData): ProfileData => {
 
     return {
         ...profileData,
-        country: apiCountryByFormValue[profileData.country] ?? profileData.country,
         socialLinks: Object.keys(socialLinks).length > 0 ? socialLinks : undefined,
     };
 };
@@ -114,14 +93,19 @@ const buildRegisterFromUser = (user?: OnboardingUser | null): User => {
     if (!user) return defaultRegister;
 
     const userProfileData = user.profileData ?? {};
-    const country = userProfileData.country ? (formCountryByApiValue[userProfileData.country] ?? userProfileData.country) : "";
+    const taxonomy = getTaxonomy();
+    const country = userProfileData.country ? taxonomy.id(userProfileData.country, ["country"]) : "";
+    const city = userProfileData.city ? taxonomy.id(userProfileData.city, ["city"], country || null) : "";
     const hydratedProfileData: ProfileData = {
         ...defaultRegister.profileData,
         ...userProfileData,
         country,
+        city,
         birthDate: formatDateField(userProfileData.birthDate),
         creationDate: formatDateField(userProfileData.creationDate),
-        services: Array.isArray(userProfileData.services) ? userProfileData.services : [],
+        services: Array.isArray(userProfileData.services)
+            ? userProfileData.services.map((service) => taxonomy.id(service, ["service"]))
+            : [],
     };
 
     return {
@@ -212,13 +196,13 @@ export const OnBoarding: React.FC = () => {
             }
         }));
     };
-    const countryOptions = useMemo(() => countries.filter((country) => country.value in apiCountryByFormValue), []);
-    const cityOptions = useMemo(() => {
-        return countries.find((item) => item.value === register.profileData.country)?.cities.map((item) => ({
-            label: item,
-            value: item,
-        })) ?? [];
-    }, [register.profileData.country]);
+    const countryOptions = getTaxonomy().countriesList;
+    const serviceOptions = getTaxonomy().services;
+    // Todas as cidades do país, em qualquer província.
+    const cityOptions = useMemo(
+        () => getTaxonomy().optionsWithin("city", register.profileData.country),
+        [register.profileData.country],
+    );
     const goToNextMiniStep = () => {
         setMiniStepIndex((currentStep) => Math.min(currentStep + 1, miniSteps.length - 1));
     };
@@ -247,7 +231,7 @@ export const OnBoarding: React.FC = () => {
     const saveOnboarding = async () => {
         setMessage("");
 
-        if (!apiCountryByFormValue[register.profileData.country]) {
+        if (!isKnownCountry(register.profileData.country)) {
             setMessage("Selecione um pais valido.");
             setMiniStepIndex(1);
             return;
@@ -400,7 +384,7 @@ export const OnBoarding: React.FC = () => {
         <div className='grid grid-cols-1 gap-4'>
             <div className={fieldGroupClassName}>
                 <label className={labelClassName}>Servicos fornecidos</label>
-                <SelectMultiple variant={"secondary"} options={services} value={selectedServices} onChange={handleServicesChange} placeholder='Selecione todos os servicos' />
+                <SelectMultiple variant={"secondary"} options={serviceOptions} value={selectedServices} onChange={handleServicesChange} placeholder='Selecione todos os servicos' />
             </div>
             <div className={fieldGroupClassName}>
                 <label className={labelClassName} htmlFor='otherServiceField'>Acrescentar servico nao descrito</label>

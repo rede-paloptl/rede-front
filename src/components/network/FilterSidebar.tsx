@@ -9,16 +9,8 @@ import { Heading } from '../ui/heading'
 import { Input } from '../ui/Input'
 import { Select, withAllOption } from '../ui/select'
 import type { ProfileTypeCounts } from './actions'
-import { countriesList, normalizeLabelKey, SelectItemType } from './filters'
-import {
-  categoriesByType,
-  citiesByCountryAndProvince,
-  CountryCode,
-  profileTypesList,
-  provincesByCountry,
-  sortByLabel,
-  subCategoriesByType,
-} from './data'
+import { normalizeLabelKey, normalizeCountryValue } from './filters'
+import { getTaxonomy, sortByLabel, type SelectItemType } from '@/lib/taxonomy'
 
 export type NetworkFilters = {
   search: string
@@ -71,182 +63,100 @@ const uniqueOptions = (options: SelectItemType[]) => {
     .sort(sortByLabel)
 }
 
-const optionMatches = (option: SelectItemType, value: string) => {
-  const normalizedValue = normalizeNetworkValue(value)
-
-  return (
-    normalizeNetworkValue(option.value) === normalizedValue ||
-    normalizeNetworkValue(option.label) === normalizedValue
-  )
-}
-
-const countryAliases: Record<string, string> = {
-  angola: 'angola',
-  'cabo-verde': 'cabo-verde',
-  'guine-bissau': 'guine-bissau',
-  mocambique: 'mocambique',
-  mozambique: 'mocambique',
-  'sao-tome': 'sao-tome-e-principe',
-  'sao-tome-e-principe': 'sao-tome-e-principe',
-  'sao-tome-principe': 'sao-tome-e-principe',
-  'timor-leste': 'timor-leste',
-}
+// As opcoes tem como value o id do termo (listas geridas em Configuracoes).
+// Do URL ou de uma tag pode chegar o id, o slug antigo ou o nome: a
+// taxonomia resolve os tres.
 
 const findCountryByValue = (value: string) => {
-  const normalizedValue = normalizeNetworkValue(value)
-  const alias = countryAliases[normalizedValue]
+  const id = normalizeCountryValue(value)
+  const country = getTaxonomy().byId.get(id)
 
-  if (alias) {
-    return countriesList.find((country) => country.value === alias)
-  }
-
-  return countriesList.find((country) => optionMatches(country, value))
+  return country?.kind === 'country' && country.isActive ? { value: country.id, label: country.label } : undefined
 }
 
 const findProvinceParent = (provinceValue: string) => {
-  const normalizedProvince = normalizeNetworkValue(provinceValue)
+  const taxonomy = getTaxonomy()
+  const province = taxonomy.find(provinceValue, ['region'])
+  const country = taxonomy.ancestorOfKind(province, 'country')
 
-  for (const [country, provinces] of Object.entries(provincesByCountry)) {
-    const province = provinces.find((item) =>
-      optionMatches(item, normalizedProvince),
-    )
-
-    if (province) {
-      return {
-        country,
-        province: province.value,
-      }
-    }
-  }
-
-  return null
+  return province && country ? { country: country.id, province: province.id } : null
 }
 
+// Uma cidade sem provincia (dados antigos) fica so com o pais.
 const findCityParent = (cityValue: string) => {
-  const normalizedCity = normalizeNetworkValue(cityValue)
+  const taxonomy = getTaxonomy()
+  const city = taxonomy.find(cityValue, ['city'])
+  const country = taxonomy.ancestorOfKind(city, 'country')
+  const province = taxonomy.ancestorOfKind(city, 'region')
 
-  for (const [country, provinces] of Object.entries(
-    citiesByCountryAndProvince,
-  )) {
-    for (const [province, cities] of Object.entries(provinces)) {
-      const city = cities.find((item) => optionMatches(item, normalizedCity))
-
-      if (city) {
-        return {
-          country,
-          province,
-          city: city.value,
-        }
-      }
-    }
-  }
-
-  return null
+  return city && country ? { country: country.id, province: province?.id ?? '', city: city.id } : null
 }
 
+const getProfileTypeValues = () => getTaxonomy().profileTypesList.map((item) => item.value)
 
-const profileTypeValues = profileTypesList.map((item) => item.value)
+const getCategoryOptions = (selectedType: string) => {
+  const { categoriesByType } = getTaxonomy()
 
-// Ordena os tipos a percorrer pondo o tipo já escolhido em primeiro, para que
-// um valor que exista em dois tipos (por exemplo "VFX", que é categoria de
-// Empresa e de Profissionais) não faça saltar a escolha do utilizador.
-const typesToSearch = (preferredType?: string) =>
-  preferredType
-    ? [
-        preferredType,
-        ...profileTypeValues.filter((type) => type !== preferredType),
-      ]
-    : profileTypeValues
-
-const getCategoryOptions = (selectedType: string) =>
-  categoriesByType[selectedType] ??
-  uniqueOptions(
-    profileTypeValues.flatMap((type) => categoriesByType[type] ?? []),
+  return (
+    categoriesByType[selectedType] ??
+    uniqueOptions(getProfileTypeValues().flatMap((type) => categoriesByType[type] ?? []))
   )
-
-const findCategoryParent = (
-  categoryValue: string,
-  preferredType?: string,
-) => {
-  for (const type of typesToSearch(preferredType)) {
-    const category = (categoriesByType[type] ?? []).find((item) =>
-      optionMatches(item, categoryValue),
-    )
-
-    if (category) {
-      return {
-        type,
-        category: category.value,
-      }
-    }
-  }
-
-  return null
 }
 
-const getSubCategoryOptions = (
-  selectedType: string,
-  selectedCategory: string,
-) => {
+// O tipo ja escolhido ganha: um valor que exista em dois tipos (por exemplo
+// "VFX", que e categoria de Empresa e de Profissionais) nao faz saltar a
+// escolha do utilizador.
+const findCategoryParent = (categoryValue: string, preferredType?: string) => {
+  const taxonomy = getTaxonomy()
+  const category =
+    (preferredType ? taxonomy.find(categoryValue, ['profile-category'], preferredType) : undefined) ??
+    taxonomy.find(categoryValue, ['profile-category'])
+  const type = taxonomy.ancestorOfKind(category, 'profile-type')
+
+  return category && type ? { type: type.id, category: category.id } : null
+}
+
+const getSubCategoryOptions = (selectedType: string, selectedCategory: string) => {
+  const { subCategoriesByType } = getTaxonomy()
+
   if (selectedType && selectedCategory) {
     return subCategoriesByType[selectedType]?.[selectedCategory] ?? []
   }
 
   if (selectedType) {
-    return uniqueOptions(
-      Object.values(subCategoriesByType[selectedType] ?? {}).flat(),
-    )
+    return uniqueOptions(Object.values(subCategoriesByType[selectedType] ?? {}).flat())
   }
 
   return uniqueOptions(
-    profileTypeValues.flatMap((type) =>
-      Object.values(subCategoriesByType[type] ?? {}).flat(),
-    ),
+    getProfileTypeValues().flatMap((type) => Object.values(subCategoriesByType[type] ?? {}).flat()),
   )
 }
 
-// Vai do mais específico para o mais genérico: primeiro dentro do par
-// tipo/categoria já escolhido, depois dentro do tipo, e só então em tudo.
-// Escolher uma sub-categoria preenche sozinho a categoria e o tipo a que
-// pertence.
+// Vai do mais específico para o mais genérico: primeiro dentro da categoria
+// já escolhida, depois dentro do tipo, e só então em tudo. Escolher uma
+// sub-categoria preenche sozinho a categoria e o tipo a que pertence.
 const findSubCategoryParent = (
   subCategoryValue: string,
   preferredType?: string,
   preferredCategory?: string,
 ) => {
-  if (preferredType && preferredCategory) {
-    const subCategory = (
-      subCategoriesByType[preferredType]?.[preferredCategory] ?? []
-    ).find((item) => optionMatches(item, subCategoryValue))
+  const taxonomy = getTaxonomy()
+  const kinds = ['profile-subcategory' as const]
+  const subCategory =
+    (preferredCategory ? taxonomy.find(subCategoryValue, kinds, preferredCategory) : undefined) ??
+    (preferredType ? taxonomy.find(subCategoryValue, kinds, preferredType) : undefined) ??
+    taxonomy.find(subCategoryValue, kinds)
+  const category = taxonomy.ancestorOfKind(subCategory, 'profile-category')
+  const type = taxonomy.ancestorOfKind(subCategory, 'profile-type')
 
-    if (subCategory) {
-      return {
-        type: preferredType,
-        category: preferredCategory,
-        subCategory: subCategory.value,
-      }
-    }
-  }
+  return subCategory && category && type
+    ? { type: type.id, category: category.id, subCategory: subCategory.id }
+    : null
+}
 
-  for (const type of typesToSearch(preferredType)) {
-    const categoryMap = subCategoriesByType[type] ?? {}
-
-    for (const [category, subCategories] of Object.entries(categoryMap)) {
-      const subCategory = subCategories.find((item) =>
-        optionMatches(item, subCategoryValue),
-      )
-
-      if (subCategory) {
-        return {
-          type,
-          category,
-          subCategory: subCategory.value,
-        }
-      }
-    }
-  }
-
-  return null
+const findProfileType = (value: string) => {
+  const type = getTaxonomy().find(value, ['profile-type'])
+  return type?.isActive ? { value: type.id, label: type.label } : undefined
 }
 
 const filterKeys: NetworkFilterKey[] = [
@@ -292,7 +202,7 @@ export const getNetworkFiltersFromParams = (
 
   const type =
     params.type &&
-    profileTypesList.find((item) => optionMatches(item, params.type ?? ''))
+    findProfileType(params.type ?? '')
 
   if (type) {
     filters.type = type.value
@@ -362,7 +272,7 @@ export const getNetworkFiltersFromTag = (
     }
   }
 
-  const type = profileTypesList.find((item) => optionMatches(item, tag))
+  const type = findProfileType(tag)
 
   if (type) {
     return { type: type.value }
@@ -421,19 +331,27 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
     subCategory: selectedSubCategory,
   } = filters
 
+  const {
+    countriesList,
+    provincesByCountry,
+    citiesByCountryAndProvince,
+    profileTypesList,
+    profileTypeIdBySlug,
+  } = getTaxonomy()
+
   const provinceOptions = selectedCountry
-    ? provincesByCountry[selectedCountry as CountryCode] ?? []
+    ? provincesByCountry[selectedCountry] ?? []
     : uniqueOptions(Object.values(provincesByCountry).flat())
 
   const cityOptions =
     selectedCountry && selectedProvince
-      ? citiesByCountryAndProvince[selectedCountry as CountryCode]?.[
+      ? citiesByCountryAndProvince[selectedCountry]?.[
           selectedProvince
         ] ?? []
       : selectedCountry
         ? uniqueOptions(
             Object.values(
-              citiesByCountryAndProvince[selectedCountry as CountryCode] ?? {},
+              citiesByCountryAndProvince[selectedCountry] ?? {},
             ).flat(),
           )
         : uniqueOptions(
@@ -462,7 +380,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
   )
 
   const categoryAllLabel =
-    selectedType === 'profissionais'
+    selectedType === profileTypeIdBySlug.profissionais
       ? 'Todas as profissões'
       : 'Todas as categorias'
 

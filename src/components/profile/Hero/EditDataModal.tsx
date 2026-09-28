@@ -5,8 +5,9 @@ import { X } from "lucide-react"
 import { User } from "@/types/User"
 import { SocialNetwork } from "@/types/Profile"
 import { customBlur } from "@/app/fonts"
-import { countries, services, socialFields } from "@/components/Auth/data"
-import { getCoreSkillOptions, getSkillOptions } from "../Bio/SectionEditSkills"
+import { socialFields } from "@/components/Auth/data"
+import { getTaxonomy } from "@/lib/taxonomy"
+import { getCoreSkillOptions, getSkillOptions, toSkillId, toSkillLabel } from "../Bio/SectionEditSkills"
 import { Button } from "@/components/ui/button"
 import { Heading } from "@/components/ui/heading"
 import { Input } from "@/components/ui/Input"
@@ -58,24 +59,9 @@ type FormErrors = Partial<Record<string, string>>;
 const BIO_MAX_LENGTH = 1300;
 const CORE_SKILLS_LIMIT = 3;
 
-// Mesmo mapeamento do registo (OnBoarding): o select usa o slug, a API guarda
-// o nome sem acentos.
-const apiCountryByFormValue: Record<string, string> = {
-  angola: "Angola",
-  "cabo-verde": "Cabo Verde",
-  "guine-bissau": "Guine-Bissau",
-  mocambique: "Mocambique",
-  "sao-tome-principe": "Sao Tome e Principe",
-  "timor-leste": "Timor-Leste",
-};
-
-const formCountryByApiValue = Object.fromEntries(
-  Object.entries(apiCountryByFormValue).map(([formValue, apiValue]) => [apiValue, formValue]),
-);
-
-const countryOptions = countries
-  .filter((country) => country.value in apiCountryByFormValue)
-  .map(({ label, value }) => ({ label, value }));
+// Pais, cidade, servicos e competencias usam os ids das listas geridas no
+// painel (Configuracoes). Registos antigos podem ter o nome: o formulario
+// converte-os para ids ao abrir, e a API grava sempre ids.
 
 const yesNoOptions = [
   { label: "Não", value: "no" },
@@ -135,17 +121,17 @@ const buildValues = (profile: User | undefined, profileData: ProfileData): FormV
   commercialName: profileData.commercialName ?? "",
   creationDate: toDateField(profileData.creationDate),
   isRegistered: Boolean(profileData.isRegistered),
-  services: Array.isArray(profileData.services) ? profileData.services : [],
+  services: Array.isArray(profileData.services) ? profileData.services.map((service) => getTaxonomy().id(service, ["service"])) : [],
   otherService: profileData.otherService ?? "",
   rentsEquipment: Boolean(profileData.rentsEquipment?.status),
   equipmentName: profileData.rentsEquipment?.equipmentName ?? "",
-  country: formCountryByApiValue[profileData.country] ?? profileData.country ?? "",
-  city: profileData.city ?? "",
+  country: getTaxonomy().id(profileData.country, ["country"]),
+  city: profileData.city ? getTaxonomy().id(profileData.city, ["city"], getTaxonomy().id(profileData.country, ["country"]) || null) : "",
   professionalEmail: profileData.professionalEmail ?? "",
   professionalPhone: profileData.professionalPhone ?? "",
   profession: profileData.profession ?? "",
-  coreSkills: (profileData.coreSkills ?? []).slice(0, CORE_SKILLS_LIMIT),
-  skills: profileData.skills ?? [],
+  coreSkills: (profileData.coreSkills ?? []).map(toSkillId).slice(0, CORE_SKILLS_LIMIT),
+  skills: (profileData.skills ?? []).map(toSkillId),
   bio: profileData.bio ?? "",
   socialLinks: socialFields.reduce(
     (links, field) => ({ ...links, [field.key]: profileData.socialLinks?.[field.key] ?? "" }),
@@ -158,7 +144,9 @@ const validate = (values: FormValues, isIndividual: boolean): FormErrors => {
   const errors: FormErrors = {};
 
   if (values.name.trim().length < 2) errors.name = "O nome deve ter pelo menos 2 caracteres.";
-  if (!apiCountryByFormValue[values.country]) errors.country = "Selecione um país válido.";
+  if (!getTaxonomy().countriesList.some((country) => country.value === values.country)) {
+    errors.country = "Selecione um país válido.";
+  }
 
   if (isIndividual) {
     if (!values.artisticName.trim()) errors.artisticName = "Informe o nome artístico.";
@@ -208,15 +196,21 @@ const EditDataForm: React.FC<EditDataModalProps> = ({ profile, profileData, isSa
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitError, setSubmitError] = useState("");
 
-  const cityOptions = useMemo(() => {
-    const cities = countries.find((item) => item.value === values.country)?.cities ?? [];
-    const options = cities.map((city) => ({ label: city, value: city }));
+  const countryOptions = getTaxonomy().countriesList;
+  const serviceOptions = getTaxonomy().services;
 
-    return values.city && !cities.includes(values.city) ? [{ label: values.city, value: values.city }, ...options] : options;
+  // Todas as cidades do pais, em qualquer provincia. Uma cidade gravada que
+  // entretanto saiu da lista continua visivel, para nao se perder.
+  const cityOptions = useMemo(() => {
+    const options = getTaxonomy().optionsWithin("city", values.country);
+
+    return values.city && !options.some((option) => option.value === values.city)
+      ? [{ label: getTaxonomy().label(values.city, ["city"]), value: values.city }, ...options]
+      : options;
   }, [values.country, values.city]);
 
-  const coreSkillOptions = getCoreSkillOptions(profileData).filter((option) => !values.coreSkills.includes(option.label));
-  const skillOptions = getSkillOptions(profileData).filter((option) => !values.skills.includes(option.label));
+  const coreSkillOptions = getCoreSkillOptions(profileData).filter((option) => !values.coreSkills.includes(option.value));
+  const skillOptions = getSkillOptions(profileData).filter((option) => !values.skills.includes(option.value));
 
   const set = <K extends keyof FormValues>(key: K, value: FormValues[K]) => {
     setValues((current) => ({ ...current, [key]: value }));
@@ -245,7 +239,7 @@ const EditDataForm: React.FC<EditDataModalProps> = ({ profile, profileData, isSa
     }, {});
 
     const patch: Partial<ProfileData> = {
-      country: apiCountryByFormValue[values.country],
+      country: values.country,
       city: values.city,
       professionalEmail: values.professionalEmail.trim(),
       professionalPhone: values.professionalPhone.trim(),
@@ -280,7 +274,7 @@ const EditDataForm: React.FC<EditDataModalProps> = ({ profile, profileData, isSa
     <div className="flex min-h-11 flex-wrap items-center gap-2 rounded-[8px] border-[1.3px] border-white px-3 py-2">
       {items.length > 0 ? items.map((item) => (
         <Tag key={item} className="flex items-center gap-1 bg-rede-surface">
-          {item}
+          {toSkillLabel(item)}
           <X width={12} height={12} color="#ffffff" className="cursor-pointer" onClick={() => !isSaving && onRemove(item)} />
         </Tag>
       )) : (
@@ -387,7 +381,7 @@ const EditDataForm: React.FC<EditDataModalProps> = ({ profile, profileData, isSa
           <>
             <SectionTitle>Serviços</SectionTitle>
             <Field label="Serviços fornecidos">
-              <SelectMultiple variant="secondary" options={services} value={values.services} placeholder="Selecione todos os serviços" disabled={isSaving} onChange={(value) => set("services", value)} />
+              <SelectMultiple variant="secondary" options={serviceOptions} value={values.services} placeholder="Selecione todos os serviços" disabled={isSaving} onChange={(value) => set("services", value)} />
             </Field>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Outro serviço">
@@ -415,8 +409,7 @@ const EditDataForm: React.FC<EditDataModalProps> = ({ profile, profileData, isSa
             options={coreSkillOptions}
             disabled={isSaving || values.coreSkills.length >= CORE_SKILLS_LIMIT}
             onChange={(value) => {
-              const label = coreSkillOptions.find((option) => option.value === value)?.label ?? value;
-              if (label) set("coreSkills", [...values.coreSkills, label]);
+              if (value) set("coreSkills", [...values.coreSkills, value]);
             }}
             {...selectClassNames}
           />
@@ -430,8 +423,7 @@ const EditDataForm: React.FC<EditDataModalProps> = ({ profile, profileData, isSa
             options={skillOptions}
             disabled={isSaving}
             onChange={(value) => {
-              const label = skillOptions.find((option) => option.value === value)?.label ?? value;
-              if (label) set("skills", [...values.skills, label]);
+              if (value) set("skills", [...values.skills, value]);
             }}
             {...selectClassNames}
           />

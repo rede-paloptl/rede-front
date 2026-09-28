@@ -1,4 +1,5 @@
 import { SelectItemType } from '../network/filters'
+import { getTaxonomy } from '@/lib/taxonomy'
 import { FilmType } from './Films'
 
 export type FilmFilters = {
@@ -29,8 +30,10 @@ export function filterFilms(films: FilmType[], filters: FilmFilters): FilmType[]
       if (!haystack.includes(search)) return false
     }
 
-    if (filters.country && film.country !== filters.country) return false
-    if (filters.genre && film.genre !== filters.genre) return false
+    // Os filtros usam ids das listas; os filmes guardam o slug.
+    const taxonomy = getTaxonomy()
+    if (filters.country && taxonomy.id(film.country, ['country']) !== filters.country) return false
+    if (filters.genre && taxonomy.id(film.genre, ['film-genre']) !== filters.genre) return false
     if (filters.year && film.year !== filters.year) return false
 
     return true

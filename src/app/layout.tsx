@@ -3,6 +3,7 @@ import { Poppins } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
+import { ensureTaxonomy } from "@/lib/taxonomy";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -28,17 +29,20 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Listas de opções (Configurações do painel), partilhadas com o browser.
+  const taxonomy = await ensureTaxonomy();
+
   return (
     // 2. Injete a variável na tag html
     <html lang="pt" className={`${poppins.variable} h-full antialiased`}>
       {/* 3. Mantenha a classe no body */}
       <body className={`${poppins.className} bg-background text-foreground antialiased`}>
-        <Providers>
+        <Providers taxonomyTerms={taxonomy.terms}>
           {children}
         </Providers>
       </body>

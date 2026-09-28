@@ -5,6 +5,22 @@ import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/hooks/useAuth";
 
+/**
+ * Destino pedido por quem acabou de iniciar sessao nesta pagina (ex: signup
+ * com Google segue para o onboarding em vez do perfil). Consumido uma vez.
+ */
+export const POST_AUTH_REDIRECT = "rede.postAuthRedirect";
+
+const consumePostAuthRedirect = () => {
+    try {
+        const target = window.sessionStorage.getItem(POST_AUTH_REDIRECT);
+        window.sessionStorage.removeItem(POST_AUTH_REDIRECT);
+        return target?.startsWith("/") ? target : null;
+    } catch {
+        return null;
+    }
+};
+
 type GuestOnlyProps = {
     children: React.ReactNode;
     /** Para onde vai o utilizador que ja tem sessao iniciada. */
@@ -28,7 +44,7 @@ export const GuestOnly: React.FC<GuestOnlyProps> = ({
     useEffect(() => {
         if (loading || !isAuthenticated) return;
 
-        router.replace(redirectTo);
+        router.replace(consumePostAuthRedirect() ?? redirectTo);
     }, [isAuthenticated, loading, redirectTo, router]);
 
     if (isAuthenticated) return null;

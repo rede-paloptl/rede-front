@@ -17,6 +17,7 @@ import { ProfileType } from "../ProfileCard";
 import { Text } from "../ui/text";
 import { filterProfiles } from "./actions";
 import { normalizeCountryValue } from "./filters";
+import { getTaxonomy } from "@/lib/taxonomy";
 import { useNetworkFilters } from "./useNetworkFilters";
 import {
   NetworkProfilesStatus,
@@ -100,14 +101,14 @@ const countries: CountryData[] = [
 // Mocambique e o pais que o cartao mostra quando nao ha filtro de pais.
 const DEFAULT_COUNTRY_ID = "508";
 
-// O value canonico do pais ("mocambique") e a chave que liga o mapa aos
-// filtros e aos perfis.
+// O id do termo do pais (listas de Configuracoes) e a chave que liga o mapa
+// aos filtros e aos perfis. Calculado a pedido: as listas chegam depois de o
+// modulo carregar.
 const countryValueOf = (country: CountryData) =>
   normalizeCountryValue(country.name);
 
-const COUNTRY_ID_BY_VALUE: Record<string, string> = Object.fromEntries(
-  countries.map((country) => [countryValueOf(country), country.id]),
-);
+const getMapCountryIdByValue = (value: string) =>
+  countries.find((country) => countryValueOf(country) === value)?.id;
 
 const COLORS = {
   bg: "#0f0f0f",
@@ -162,13 +163,14 @@ const buildStatsByCountry = (
   profiles: ProfileType[],
 ): Record<string, CountryStats> => {
   const stats: Record<string, CountryStats> = {};
+  const companyTypeId = getTaxonomy().profileTypeIdBySlug.empresa;
 
   for (const profile of profiles) {
     if (!profile.country) continue;
 
     const current = stats[profile.country] ?? { ...EMPTY_STATS };
 
-    if (profile.type === "empresa") current.company += 1;
+    if (profile.type === companyTypeId) current.company += 1;
     else current.individual += 1;
 
     stats[profile.country] = current;
@@ -300,7 +302,7 @@ const PalopMapSection: React.FC = () => {
   const { profiles, status } = useNetworkProfiles();
 
   const selectedId =
-    (filters.country && COUNTRY_ID_BY_VALUE[filters.country]) ||
+    (filters.country && getMapCountryIdByValue(filters.country)) ||
     lastSelectedId;
 
   const selectedCountry = useMemo(

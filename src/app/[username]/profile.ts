@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { getServerApiBaseUrl } from "@/lib/serverApi";
+import { ensureTaxonomy, getTaxonomy, type TaxonomyKind } from "@/lib/taxonomy";
 import type { User } from "@/types/User";
 
 /** Segundos durante os quais a pagina de um perfil pode vir da cache. */
@@ -46,6 +47,10 @@ export const getPublicProfile = cache(async (username: string): Promise<User | n
   }
 
   const data = await response.json() as { user?: User };
+
+  // Os nomes (pais, cidade, competencias) vem das listas de Configuracoes.
+  await ensureTaxonomy();
+
   return data.user ?? null;
 });
 
@@ -60,25 +65,37 @@ export const getDisplayName = (profile: User) =>
 export const getProfileImage = (profile: User) =>
   profile.profileData?.imageUrl || profile.imageUrl || profile.profileData?.coverImageUrl || undefined;
 
-/** A API guarda os paises sem acentos; para mostrar e para o schema.org. */
-const palopCountries: Record<string, { name: string; code: string }> = {
-  "Angola": { name: "Angola", code: "AO" },
-  "Cabo Verde": { name: "Cabo Verde", code: "CV" },
-  "Guine-Bissau": { name: "Guiné-Bissau", code: "GW" },
-  "Mocambique": { name: "Moçambique", code: "MZ" },
-  "Sao Tome e Principe": { name: "São Tomé e Príncipe", code: "ST" },
-  "Timor-Leste": { name: "Timor-Leste", code: "TL" },
+/** Codigo ISO para o schema.org, pelo slug do termo (o nome pode mudar no painel). */
+const countryCodes: Record<string, string> = {
+  angola: "AO",
+  "cabo-verde": "CV",
+  "guine-bissau": "GW",
+  mocambique: "MZ",
+  "sao-tome-e-principe": "ST",
+  "timor-leste": "TL",
 };
 
-export const getCountry = (country?: string) =>
-  country ? palopCountries[country] ?? { name: country, code: undefined } : undefined;
+/** O perfil guarda o id do pais (registos antigos, o nome). */
+export const getCountry = (country?: string) => {
+  if (!country) return undefined;
+
+  const term = getTaxonomy().find(country, ["country"]);
+  return { name: term?.label ?? country, code: term ? countryCodes[term.slug] : undefined };
+};
+
+export const getCityLabel = (city?: string) => (city ? getTaxonomy().label(city, ["city"]) : "");
+
+const skillKinds: TaxonomyKind[] = ["profile-category", "profile-subcategory"];
+
+/** Nomes das competencias (o perfil guarda ids). */
+export const getSkillLabels = (skills?: string[]) => (skills ?? []).map((skill) => getTaxonomy().label(skill, skillKinds));
 
 /** "Realizadora · Maputo, Moçambique" — so com o que estiver preenchido. */
 export const getProfileHeadline = (profileData: ProfileData | null | undefined) => {
   if (!profileData) return "";
 
-  const role = profileData.profession || profileData.coreSkills?.slice(0, 2).join(", ");
-  const place = [profileData.city, getCountry(profileData.country)?.name].filter(Boolean).join(", ");
+  const role = profileData.profession || getSkillLabels(profileData.coreSkills?.slice(0, 2)).join(", ");
+  const place = [getCityLabel(profileData.city), getCountry(profileData.country)?.name].filter(Boolean).join(", ");
 
   return [role, place].filter(Boolean).join(" · ");
 };
