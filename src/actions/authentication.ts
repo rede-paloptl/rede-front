@@ -32,6 +32,38 @@ const getRequestBaseUrl = async () => {
   }
 }
 
+/**
+ * Estas actions correm no servidor do Next, por isso a API veria o IP e a
+ * localizacao da Vercel. Reencaminhamos os do browser para o historico de
+ * sessoes e o email de alerta. O segredo prova a API que vem de nos.
+ */
+const getClientForwardHeaders = async (): Promise<Record<string, string>> => {
+  try {
+    const requestHeaders = await headers();
+    const forwarded: Record<string, string> = {};
+
+    const set = (name: string, value: string | null | undefined) => {
+      if (value) forwarded[name] = value;
+    };
+
+    const clientIp =
+      requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      requestHeaders.get("x-real-ip");
+
+    set("x-client-ip", clientIp);
+    set("x-client-user-agent", requestHeaders.get("user-agent"));
+    set("x-client-country", requestHeaders.get("x-vercel-ip-country"));
+    set("x-client-region", requestHeaders.get("x-vercel-ip-country-region"));
+    set("x-client-city", requestHeaders.get("x-vercel-ip-city"));
+    set("x-client-origin", await getRequestBaseUrl());
+    set("x-internal-secret", process.env.INTERNAL_API_SECRET);
+
+    return forwarded;
+  } catch {
+    return {};
+  }
+}
+
 export type SignupResponseType = {
   error?: string;
   message?: string;
@@ -98,7 +130,9 @@ type ConfirmResponseType = {
 
 export const confirmAccountAndChangePassword = async (token: string, password: string): Promise<ConfirmResponseType> => {
   try {
-    const responseData = await api.post<ConfirmResponseType>("/api/v1/auth/confirm-email-setpassword", { token, password });
+    const responseData = await api.post<ConfirmResponseType>("/api/v1/auth/confirm-email-setpassword", { token, password }, {
+      headers: await getClientForwardHeaders(),
+    });
     if (responseData.data) {
       const { user, token } = responseData.data;
       return { user, token }
@@ -127,7 +161,9 @@ export type LoginUsingEmailAndPassResponseType = {
 
 export const loginUsingEmailAndPassword = async (email: string, password: string): Promise<LoginUsingEmailAndPassResponseType> => {
   try {
-    const responseData = await api.post<LoginUsingEmailAndPassResponseType>("/api/v1/auth/login-using-email-and-password", { email, password });
+    const responseData = await api.post<LoginUsingEmailAndPassResponseType>("/api/v1/auth/login-using-email-and-password", { email, password }, {
+      headers: await getClientForwardHeaders(),
+    });
     const { data: user, token } = responseData.data as LoginUsingEmailAndPassResponseType & { data?: LoggedUser };
 
     return { user, token }
@@ -146,7 +182,9 @@ export type GoogleLoginPayload = {
 
 export const loginUsingGoogle = async ({ idToken }: GoogleLoginPayload): Promise<LoginUsingEmailAndPassResponseType> => {
   try {
-    const responseData = await api.post<LoginUsingEmailAndPassResponseType>("/api/v1/auth/login-using-google", { idToken });
+    const responseData = await api.post<LoginUsingEmailAndPassResponseType>("/api/v1/auth/login-using-google", { idToken }, {
+      headers: await getClientForwardHeaders(),
+    });
     const { data: user, token } = responseData.data as LoginUsingEmailAndPassResponseType & { data?: LoggedUser };
 
     return { user, token }

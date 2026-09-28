@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ChevronDown,
+  History,
   Languages,
   LogIn,
   LogOut,
@@ -188,6 +189,15 @@ export const TopBar: React.FC = () => {
                     Perfil
                   </Link>
 
+                  <Link
+                    href="/historico"
+                    role="menuitem"
+                    className="flex items-center gap-2 px-4 py-3 text-sm text-rede-white transition-colors hover:bg-white/5 focus-visible:bg-white/5 focus-visible:outline-none"
+                  >
+                    <History aria-hidden="true" className="h-4 w-4" />
+                    Histórico
+                  </Link>
+
                   <button
                     type="button"
                     role="menuitem"
@@ -325,6 +335,14 @@ export const TopBar: React.FC = () => {
                 >
                   <User2 aria-hidden="true" className="h-4 w-4" />
                   Ver perfil
+                </Link>
+
+                <Link
+                  href="/historico"
+                  className="flex min-h-12 items-center justify-center gap-2 rounded-full border border-rede-white px-5 py-3 text-sm font-medium text-rede-white transition-colors hover:bg-rede-white hover:text-rede-surface"
+                >
+                  <History aria-hidden="true" className="h-4 w-4" />
+                  Histórico de sessões
                 </Link>
 
                 <button

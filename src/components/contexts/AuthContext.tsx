@@ -41,6 +41,7 @@ import {
 import type { SignupPayload } from "@/actions/authentication";
 
 import { eraseCookie } from "@/actions/cookie";
+import { endCurrentSession } from "@/actions/sessions";
 
 
 export interface AuthInterface {
@@ -299,6 +300,9 @@ export const AuthProvider = ({
      */
     const signOut = useCallback(
         async (path?: string) => {
+            // Antes de limpar: o pedido precisa do token para fechar a sessao.
+            await endCurrentSession();
+
             cleanSession();
 
             setLoading(false);
