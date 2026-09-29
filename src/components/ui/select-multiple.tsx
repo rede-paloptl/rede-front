@@ -3,6 +3,8 @@ import * as React from 'react'
 import { cva } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 import { Check, ChevronDown } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { popoverPositionStyle, useAnchoredPopover } from './use-anchored-popover'
 
 const selectTriggerVariants = cva(
   'w-full inline-flex items-center justify-between font-medium transition-all rounded-lg bg-transparent text-rede-white border border-white/20 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40 text-left',
@@ -88,7 +90,8 @@ export const SelectMultiple = ({
   popoverClassName,
 }: SelectMultipleProps) => {
   const [isOpen, setIsOpen] = React.useState(false)
-  const containerRef = React.useRef<HTMLDivElement>(null)
+  const close = React.useCallback(() => setIsOpen(false), [])
+  const { coords, containerRef, anchorRef, popoverRef } = useAnchoredPopover(isOpen, close)
 
   const selectedOptions = options.filter((opt) => value.includes(opt.value))
   const v = variantStyles[variant]
@@ -108,16 +111,6 @@ export const SelectMultiple = ({
     }
   }
 
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
   // Dentro do componente, antes do return
   const scrollbarColor = {
     primary: '#F5C518', // rede-yellow — substitui pelo teu valor real
@@ -127,7 +120,7 @@ export const SelectMultiple = ({
 
   return (
     <div ref={containerRef} className={cn('relative inline-flex flex-col w-full gap-2', className)}>
-      <div className="inline-flex items-center w-full">
+      <div ref={anchorRef} className="inline-flex items-center w-full">
 
         {/* CORPO DO SELECT */}
         <button
@@ -163,10 +156,12 @@ export const SelectMultiple = ({
       </div>
 
       {/* MENU DROPDOWN */}
-      {isOpen && (
+      {isOpen && createPortal(
         <div
+          ref={popoverRef}
+          style={popoverPositionStyle(coords)}
           className={cn(
-            'absolute top-[105%] left-0 w-full z-50 overflow-hidden rounded-2xl border bg-rede-surface p-1.5 shadow-xl',
+            'z-[9999] overflow-hidden rounded-2xl border bg-rede-surface p-1.5 shadow-xl',
             popoverClassName,
             v.popover,
           )}
@@ -188,6 +183,7 @@ export const SelectMultiple = ({
           <ul
             className="max-h-60 overflow-y-auto space-y-1 scrollbar-thin"
             style={{
+              maxHeight: coords.maxHeight,
               //scrollbarWidth: '2px', // Firefox (thin é o mínimo, mas o color acompanha)
               scrollbarColor: `${scrollbarColor} transparent`,
             }}
@@ -219,7 +215,8 @@ export const SelectMultiple = ({
               )
             })}
           </ul>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

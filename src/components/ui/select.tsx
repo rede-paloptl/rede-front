@@ -4,6 +4,7 @@ import { cva } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 import { Check, ChevronDown } from 'lucide-react'
 import { createPortal } from 'react-dom';
+import { popoverPositionStyle, useAnchoredPopover } from './use-anchored-popover'
 
 const selectTriggerVariants = cva(
   'w-full inline-flex items-center justify-between font-medium transition-all rounded-lg bg-transparent text-rede-white border border-white/90 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40 text-left',
@@ -114,58 +115,12 @@ export const Select = ({
   popoverClassName,
 }: SelectProps) => {
   const [isOpen, setIsOpen] = React.useState(false)
-  const containerRef = React.useRef<HTMLDivElement>(null)
-
-  const [mounted, setMounted] = React.useState(false)
-  const [coords, setCoords] = React.useState({ top: 0, left: 0, width: 0 })
-  const wrapperRef = React.useRef<HTMLDivElement>(null) // engloba input + chevron
-
-  React.useEffect(() => setMounted(true), []);
-
+  const close = React.useCallback(() => setIsOpen(false), [])
+  // anchorRef engloba trigger + chevron
+  const { coords, containerRef, anchorRef, popoverRef } = useAnchoredPopover(isOpen, close)
 
   const selectedOption = options.find((opt) => opt.value === value)
   const v = variantStyles[variant]
-
-
-  // calcula posição do trigger sempre que abrir, ou em scroll/resize
-  const updateCoords = React.useCallback(() => {
-    if (!wrapperRef.current) return
-    const rect = wrapperRef.current.getBoundingClientRect()
-    setCoords({
-      top: rect.bottom + 8, // 8px de gap, equivalente ao top-[105%] antigo
-      left: rect.left,
-      width: rect.width,
-    })
-  }, [])
-
-  React.useEffect(() => {
-    if (!isOpen) return
-    updateCoords()
-    window.addEventListener('scroll', updateCoords, true)
-    window.addEventListener('resize', updateCoords)
-    return () => {
-      window.removeEventListener('scroll', updateCoords, true)
-      window.removeEventListener('resize', updateCoords)
-    }
-  }, [isOpen, updateCoords])
-
-
-
-  // clique fora agora precisa considerar o portal também
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node
-      const clickedInsideTrigger = containerRef.current?.contains(target)
-      const clickedInsidePopover = popoverRef.current?.contains(target)
-      if (!clickedInsideTrigger && !clickedInsidePopover) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [options, value])
-
-  const popoverRef = React.useRef<HTMLDivElement>(null)
 
   React.useEffect(() => {
     if (!isOpen) return
@@ -179,7 +134,7 @@ export const Select = ({
 
   return (
     <div ref={containerRef} className={cn('relative inline-flex flex-col w-full gap-2', className)}>
-      <div ref={wrapperRef} className="inline-flex items-center w-full">
+      <div ref={anchorRef} className="inline-flex items-center w-full">
 
         {/* CORPO DO SELECT */}
         <button
@@ -219,17 +174,17 @@ export const Select = ({
         </button>
       </div>
 
-      {mounted && isOpen && createPortal(
+      {isOpen && createPortal(
         <div
           ref={popoverRef}
-          style={{ position: 'fixed', top: coords.top, left: coords.left, width: coords.width }}
+          style={popoverPositionStyle(coords)}
           className={cn(
             'z-[9999] overflow-hidden rounded-2xl border bg-rede-surface p-1.5 shadow-xl',
             popoverClassName,
             v.popover,
           )}
         >
-          <ul role="listbox" className="max-h-80 overflow-y-auto space-y-1
+          <ul role="listbox" style={{ maxHeight: coords.maxHeight }} className="max-h-80 overflow-y-auto space-y-1
       [&::-webkit-scrollbar]:w-2
       [&::-webkit-scrollbar]:h-3
       [&::-webkit-scrollbar-track]:bg-transparent

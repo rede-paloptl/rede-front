@@ -170,6 +170,8 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
               [interactionVariants[variant ?? 'primary'].active]:
                 isInteractionActive,
             },
+            props.type === 'date' &&
+              '[color-scheme:dark] [&::-webkit-calendar-picker-indicator]:cursor-pointer',
             className
           )}
           {...props}
