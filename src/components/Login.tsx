@@ -5,12 +5,13 @@ import { Heading } from "./ui/heading"
 import { Text } from './ui/text';
 import { Input } from './ui/Input';
 import { EyeOff } from 'lucide-react';
-import { SubmitEvent, useEffect, useState } from 'react';
+import { SubmitEvent, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Button } from './ui/button';
-import { GoogleIcon } from '@/icons/GoogleIcon';
 import { useAuth } from '@/hooks/useAuth';
-import { signInWithGoogle } from '@/lib/googleAuth';
+import type { GoogleSignInResult } from '@/lib/googleAuth';
+import { GoogleSignInButton } from './Auth/GoogleSignInButton';
+import { TURNSTILE_SITE_KEY, TurnstileHandle, TurnstileWidget } from './Auth/TurnstileWidget';
 import { SESSION_EXPIRED_MESSAGE } from '@/actions/constants';
 
 
@@ -25,6 +26,8 @@ export const Login: React.FC = () => {
     const [email, setEmail] = useState<string>("");
     const [password, setPassword] = useState<string>("");
     const [sessionNotice, setSessionNotice] = useState("");
+    const [turnstileToken, setTurnstileToken] = useState("");
+    const turnstileRef = useRef<TurnstileHandle>(null);
 
 
     /**
@@ -76,10 +79,24 @@ export const Login: React.FC = () => {
             return;
         }
 
+        if (TURNSTILE_SITE_KEY && !turnstileToken) {
+            setIsError(true);
+            setShowMessaage(true);
+            setMessage("Confirme que não é um robô.");
+
+            setTimeout(() => {
+                setShowMessaage(false);
+                setMessage("");
+            }, 3000);
+            return;
+        }
+
         try {
-            const responseData = await signInUsingEmailAndPassword(email, password);
+            const responseData = await signInUsingEmailAndPassword(email, password, turnstileToken);
 
             if (responseData?.error) {
+                // O token ja foi gasto nesta tentativa: pede um novo.
+                turnstileRef.current?.reset();
                 setIsError(true);
                 setShowMessaage(true);
                 setMessage(responseData?.message || "Ocorreu um erro ao criar a conta.");
@@ -103,7 +120,8 @@ export const Login: React.FC = () => {
                 }, 3000);
             }
 
-        } catch (err: any) {
+        } catch {
+            turnstileRef.current?.reset();
             setIsError(true);
             setShowMessaage(true);
             setMessage("Não foi possível iniciar sessão. Tente novamente.");
@@ -115,13 +133,23 @@ export const Login: React.FC = () => {
         }
     }
 
-    const handleGoogleLogin = async () => {
+    const handleGoogleError = (text: string) => {
+        setIsError(true);
+        setShowMessaage(true);
+        setMessage(text);
+
+        setTimeout(() => {
+            setShowMessaage(false);
+            setMessage("");
+        }, 3000);
+    }
+
+    const handleGoogleLogin = async ({ idToken }: GoogleSignInResult) => {
         setSessionNotice("");
         setShowMessaage(false);
         setGoogleLoading(true);
 
         try {
-            const { idToken } = await signInWithGoogle();
             const responseData = await signInUsingGoogle({ idToken });
 
             if (responseData?.error) {
@@ -183,7 +211,7 @@ export const Login: React.FC = () => {
                             </div>
                         </div>
 
-                        <Link href="/reset-pawword" className='flex justify-end mt-4.5'>
+                        <Link href="/reset-password" className='flex justify-end mt-4.5'>
                             <Text className='text-[14px] leading-5 font-bold'>Esqueci a senha</Text>
                         </Link>
 
@@ -196,6 +224,12 @@ export const Login: React.FC = () => {
                         }
 
 
+                        {TURNSTILE_SITE_KEY &&
+                            <div className='w-full mt-6'>
+                                <TurnstileWidget ref={turnstileRef} onTokenChange={setTurnstileToken} />
+                            </div>
+                        }
+
                         <div className='w-full mt-8 mb-8'>
                             <Button type='submit' containerClassName='w-full'>
                                 Entrar
@@ -206,9 +240,7 @@ export const Login: React.FC = () => {
                     <Text className='font-medium leading-7 text-center mt-6 mb-6'>Ou</Text>
 
                     <div className='w-full h-auto flex flex-col gap-6'>
-                        <Button type='button' variant={"secondary"} icon={<GoogleIcon width={12} height={12} />} className='w-full' disabled={googleLoading} onClick={handleGoogleLogin}>
-                            {googleLoading ? "A ligar ao Google..." : "Continue com Google"}
-                        </Button>
+                        <GoogleSignInButton text='signin_with' label={googleLoading ? "A ligar ao Google..." : "Continue com Google"} disabled={googleLoading} onSuccess={handleGoogleLogin} onError={handleGoogleError} />
                     </div>
 
                     <div className='w-full flex justify-center mt-6 mb-6'>

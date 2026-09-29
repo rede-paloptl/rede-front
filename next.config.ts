@@ -31,6 +31,11 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "*.redecinemapaloptl.org",
       },
+      // Foto de perfil vinda do Google no signup.
+      {
+        protocol: 'https',
+        hostname: '*.googleusercontent.com',
+      },
       ...(r2PublicHostname
         ? [{ protocol: "https" as const, hostname: r2PublicHostname }]
         : []),

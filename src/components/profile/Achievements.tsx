@@ -269,7 +269,7 @@ export const Achievements: React.FC<AchievementsProps> = ({
   return (
     <section className="h-auto w-full">
       <div className="relative mx-auto flex h-auto min-h-90 w-full max-w-[1920px] items-center justify-center">
-        <div className="mb-20 h-auto w-full max-w-360 px-4 sm:px-6 lg:mb-40 lg:px-0">
+        <div className="h-auto w-full max-w-360 px-4 pb-20 pt-14 sm:px-6 sm:pt-16 lg:px-0 lg:pb-40 lg:pt-20">
           <div className="mb-6 flex flex-wrap items-center gap-4">
             <Heading
               className={`${customBlur.className} min-w-0 flex-1 text-[34px] leading-[38px] sm:text-[40px] sm:leading-11 lg:flex-none lg:text-[48px] lg:leading-12`}

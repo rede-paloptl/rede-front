@@ -9,6 +9,8 @@ import { Modal } from "@/components/ui/modal"
 import { ImageCropUploader } from "@/components/ImageCropUploader"
 import Link from "next/link"
 import { getCountryLabel } from "@/components/network/filters"
+import { getTaxonomy } from "@/lib/taxonomy"
+import { toSkillLabel } from "../Bio/SectionEditSkills"
 import { EditDataModal } from "./EditDataModal"
 
 type ProfileData = User["profileData"];
@@ -76,10 +78,10 @@ export const ShowProfile: React.FC<ShowProfileType> = ({
   };
 
   const displayName = profile?.name || profileData.artisticName || profileData.commercialName || "Perfil";
-  const location = [profileData.city, getCountryLabel(profileData.country)].filter(Boolean).join(", ");
+  const location = [getTaxonomy().label(profileData.city, ["city"]), getCountryLabel(profileData.country)].filter(Boolean).join(", ");
   const website = profileData.socialLinks?.website;
   const coreSkills = profileData.coreSkills ?? [];
-  const coreSkillsLabel = coreSkills.join(" | ");
+  const coreSkillsLabel = coreSkills.map(toSkillLabel).join(" | ");
   const hasContacts = Boolean(location || profileData.professionalEmail || website);
 
   const handleAvatarUploaded = async (url: string) => {
@@ -204,7 +206,7 @@ export const ShowProfile: React.FC<ShowProfileType> = ({
         onSave={handleSaveData}
       />
 
-      <Modal open={isAvatarCropOpen} onClose={() => setIsAvatarCropOpen(false)} panelClassName="flex justify-center rounded-none border-[1.3px] border-rede-white/20">
+      <Modal open={isAvatarCropOpen} onClose={() => setIsAvatarCropOpen(false)} closeOnBackdropClick={false} panelClassName="flex justify-center rounded-none border-[1.3px] border-rede-white/20">
         <ImageCropUploader
           className="w-[350px]"
           height={350}

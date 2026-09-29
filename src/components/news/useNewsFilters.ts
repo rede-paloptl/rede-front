@@ -3,13 +3,14 @@
 import { useCallback, useMemo } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 
-import { countriesList, normalizeLabelKey } from '../network/filters'
+import { normalizeCountryValue, normalizeLabelKey } from '../network/filters'
+import { getTaxonomy } from '@/lib/taxonomy'
+import { getContentCategoryOptions, getContentThemesByCategory } from './categories'
 import {
   defaultNewsFilters,
   NewsFilters,
   normalizeNewsValue,
 } from './actions'
-import { newsCategories, newsSubCategories } from './data'
 
 type NewsFilterKey = keyof NewsFilters
 
@@ -33,30 +34,14 @@ const optionMatches = (
   )
 }
 
-const countryAliases: Record<string, string> = {
-  angola: 'angola',
-  'cabo-verde': 'cabo-verde',
-  'guine-bissau': 'guine-bissau',
-  'guinea-bissau': 'guine-bissau',
-  mocambique: 'mocambique',
-  mozambique: 'mocambique',
-  'sao-tome': 'sao-tome-e-principe',
-  'sao-tome-e-principe': 'sao-tome-e-principe',
-  'sao-tome-principe': 'sao-tome-e-principe',
-  'timor-leste': 'timor-leste',
-}
-
 const findCountryByValue = (value: string) => {
-  const normalizedValue = normalizeLabelKey(value)
-  const alias = countryAliases[normalizedValue]
+  const id = normalizeCountryValue(value)
 
-  if (alias) return countriesList.find((country) => country.value === alias)
-
-  return countriesList.find((country) => optionMatches(country, value))
+  return getTaxonomy().countriesList.find((country) => country.value === id)
 }
 
 const findCategoryByValue = (value: string) =>
-  newsCategories.find((category) => optionMatches(category, value))
+  getContentCategoryOptions().find((category) => optionMatches(category, value))
 
 // As notícias chegam da API depois de a página abrir: o ano do URL não pode
 // depender da lista carregada. Qualquer ano de quatro dígitos é aceite; se não
@@ -70,7 +55,7 @@ const findYearByValue = (value: string) => {
 const findSubCategoryParent = (value: string) => {
   const normalizedValue = normalizeNewsValue(value)
 
-  for (const [category, subCategories] of Object.entries(newsSubCategories)) {
+  for (const [category, subCategories] of Object.entries(getContentThemesByCategory())) {
     const subCategory = subCategories.find(
       (item) => normalizeNewsValue(item) === normalizedValue,
     )

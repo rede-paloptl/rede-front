@@ -13,7 +13,7 @@ import { Heading } from "@/components/ui/heading"
 import { Tag } from "@/components/ui/tag"
 import { customBlur } from "@/app/fonts"
 import { socialFields } from "@/components/Auth/data"
-import { getCoreSkillOptions } from "../Bio/SectionEditSkills"
+import { getCoreSkillOptions, toSkillId, toSkillLabel } from "../Bio/SectionEditSkills"
 import { Film, GlobeIcon, Mail, MonitorPlay, Music2, PhoneIcon, X } from "lucide-react"
 import Facebook from "@/icons/Facebook"
 import Instagram from "@/icons/Instagram"
@@ -140,13 +140,14 @@ export const EditProfile: React.FC<EditProfileType> = ({
   onSave,
   onSaveProfileData
 }) => {
-  const initialCoreSkills = uniqueSkills(profileData.coreSkills ?? []).slice(0, 3);
+  // Competencias guardam ids das listas (registos antigos podem ter o nome).
+  const initialCoreSkills = uniqueSkills((profileData.coreSkills ?? []).map(toSkillId)).slice(0, 3);
 
   const [draft, setDraft] = useState<ProfileHeroDraft>({
     name: profile?.name ?? "",
     username: profileData.username ?? "",
     coreSkills: initialCoreSkills,
-    skills: uniqueSkills([...(profileData.skills ?? []), ...initialCoreSkills]),
+    skills: uniqueSkills([...(profileData.skills ?? []).map(toSkillId), ...initialCoreSkills]),
   });
 
   const [isContactsOpen, setIsContactsOpen] = useState(false);
@@ -192,21 +193,12 @@ export const EditProfile: React.FC<EditProfileType> = ({
     setDraft((lastState) => ({ ...lastState, [key]: value }));
   };
 
-  const skillOptions = getCoreSkillOptions(profileData).filter((option) => {
-    const normalizedCoreSkills = draft.coreSkills.map((skill) => skill.toLowerCase());
-
-    return (
-      !normalizedCoreSkills.includes(option.label.toLowerCase()) &&
-      !normalizedCoreSkills.includes(option.value.toLowerCase())
-    );
-  });
+  const skillOptions = getCoreSkillOptions(profileData).filter((option) => !draft.coreSkills.includes(option.value));
 
   const handleCoreSkillAdd = (value: string) => {
     if (draft.coreSkills.length >= 3) return;
 
-    const selectedOption = skillOptions.find((option) => option.value === value);
-    const coreSkill = selectedOption?.label ?? value;
-    const normalizedCoreSkill = coreSkill.trim();
+    const normalizedCoreSkill = value.trim();
 
     if (!normalizedCoreSkill) return;
 
@@ -258,7 +250,7 @@ export const EditProfile: React.FC<EditProfileType> = ({
                 <div className="flex min-h-11 w-[450px] flex-wrap items-center gap-2 border-[1.3px] border-white px-3 py-2 rounded-[8px]">
                   {draft.coreSkills.length > 0 ? draft.coreSkills.map((coreSkill) => (
                     <Tag key={coreSkill} className="flex items-center gap-1 bg-rede-surface">
-                      {coreSkill}
+                      {toSkillLabel(coreSkill)}
                       <X
                         width={12}
                         height={12}
@@ -337,6 +329,7 @@ export const EditProfile: React.FC<EditProfileType> = ({
       <Modal
         open={isContactsOpen}
         onClose={() => !isSaving && setIsContactsOpen(false)}
+        closeOnBackdropClick={false}
         panelClassName="rounded-none border-[1.3px] border-rede-white/20 p-6 sm:p-8"
       >
         <Heading className={`${customBlur.className} text-[32px] leading-9 font-medium`}>

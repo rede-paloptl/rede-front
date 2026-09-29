@@ -13,6 +13,12 @@ type ModalProps = {
   wrapperClassName?: string;
   panelClassName?: string;
   closeButtonClassName?: string;
+  /**
+   * Fechar ao clicar fora do painel. Formulários devem passar false: um clique
+   * acidental no fundo fazia perder tudo o que já estava preenchido. O botão
+   * de fechar e a tecla Escape continuam a funcionar.
+   */
+  closeOnBackdropClick?: boolean;
 };
 
 export const Modal: React.FC<ModalProps> = ({
@@ -23,6 +29,7 @@ export const Modal: React.FC<ModalProps> = ({
   wrapperClassName,
   panelClassName,
   closeButtonClassName,
+  closeOnBackdropClick = true,
 }) => {
   useEffect(() => {
     if (!open) return;
@@ -48,7 +55,7 @@ export const Modal: React.FC<ModalProps> = ({
         "fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-6",
         className
       )}
-      onClick={onClose}
+      onClick={closeOnBackdropClick ? onClose : undefined}
     >
       <div className={cn("relative w-full max-w-170", wrapperClassName)} onClick={(e) => e.stopPropagation()}>
         <Button

@@ -1,7 +1,9 @@
 import axios from "axios";
 
 const productionApiBaseUrl = "https://rede-back.vercel.app";
-const localApiBaseUrl = "http://localhost:4001";
+// 127.0.0.1 e nao localhost: no Node, localhost pode resolver para ::1 (IPv6)
+// e cair noutro servico na mesma porta (ex: um container Docker).
+const localApiBaseUrl = "http://127.0.0.1:4001";
 /**
  * Resolve o endereco da API conforme o ambiente.
  *
@@ -26,8 +28,10 @@ const resolveApiBaseUrl = () => {
     : productionApiBaseUrl;
 };
 
+export const apiBaseUrl = resolveApiBaseUrl();
+
 export const api = axios.create({
-  baseURL: resolveApiBaseUrl(),
+  baseURL: apiBaseUrl,
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",

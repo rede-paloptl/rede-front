@@ -132,6 +132,7 @@ export const Hero: React.FC<HeroProps> = ({
       <Modal
         open={isCoverCropOpen}
         onClose={handleCloseCoverCrop}
+        closeOnBackdropClick={false}
         panelClassName="mx-4 w-[calc(100%-2rem)] max-w-3xl rounded-none border-[1.3px] border-rede-white/20 sm:mx-auto sm:w-full"
       >
         <ImageCropUploader

@@ -3,12 +3,13 @@
 import { useMemo, useState } from "react";
 import { Edit2, Plus, Trash2 } from "lucide-react";
 import { customBlur } from "@/app/fonts";
-import { AccountType, ProfileAchievement, ProfileFilm } from "@/types/User";
+import { ProfileAchievement, ProfileFilm } from "@/types/User";
 import { Heading } from "@/components/ui/heading";
 import { Text } from "@/components/ui/text";
 import { Button } from "../ui/button";
 import { FilmCard, FilmCardType } from "../FilmCard";
-import { AddFilmModal, FilmFormData } from "../AddFilmModal";
+import { AddFilmModal, FilmFormData, toFilmFormData, toProfileFilm } from "../AddFilmModal";
+import type { ProfileTypeSource } from "../network/data";
 
 import { FilmDetailsModal } from "./FilmDetailsModal";
 
@@ -106,7 +107,8 @@ type OutsideAgencyProps = {
   films?: ProfileFilm[];
   /** Entradas de festivais, premios e exibicoes, para o detalhe de cada filme. */
   achievements?: ProfileAchievement[];
-  accountType?: AccountType;
+  /** Tipo do perfil: as funcoes de cada filme saem das categorias desse tipo. */
+  profile?: ProfileTypeSource;
   isSaving?: boolean;
   onSaveFilms?: (
     films: ProfileFilm[],
@@ -122,7 +124,7 @@ export const OutsideAgency: React.FC<OutsideAgencyProps> = ({
   isAuthenticated = false,
   films,
   achievements,
-  accountType,
+  profile,
   isSaving = false,
   onSaveFilms,
 }) => {
@@ -139,26 +141,10 @@ export const OutsideAgency: React.FC<OutsideAgencyProps> = ({
     ? data.find((film) => film.id === editingFilmId)
     : undefined;
 
-  const initialFormData = useMemo<
-    Partial<FilmFormData> | undefined
-  >(() => {
-    if (!editingFilm) {
-      return undefined;
-    }
-
-    return {
-      id: editingFilm.id,
-      title: editingFilm.title,
-      year: String(editingFilm.year),
-      duration: editingFilm.duration ?? "",
-      countries: editingFilm.countries ?? [],
-      theme: editingFilm.type[1] ?? "",
-      genre: editingFilm.type[0] ?? "",
-      link: editingFilm.link ?? "",
-      roles: editingFilm.roles ?? [],
-      cover: editingFilm.cover,
-    };
-  }, [editingFilm]);
+  const initialFormData = useMemo(
+    () => (editingFilm ? toFilmFormData(editingFilm) : undefined),
+    [editingFilm],
+  );
 
   // O AddFilmModal mostra a mensagem se isto lancar, e mantem-se aberto.
   const handleFormSubmit = async (formData: FilmFormData) => {
@@ -166,18 +152,10 @@ export const OutsideAgency: React.FC<OutsideAgencyProps> = ({
       ? data.find((film) => film.id === formData.id)
       : undefined;
 
-    const submittedFilm: ProfileFilm = {
-      id: formData.id ?? crypto.randomUUID(),
-      title: formData.title.trim(),
-      director: currentFilm?.director ?? "",
-      type: [formData.genre, formData.theme].filter(Boolean),
-      year: Number(formData.year) || new Date().getFullYear(),
-      countries: formData.countries,
-      cover: formData.cover || FILM_PLACEHOLDER_COVER,
-      duration: formData.duration,
-      link: formData.link,
-      roles: formData.roles.length ? formData.roles : undefined,
-    };
+    const submittedFilm = toProfileFilm(
+      { ...formData, cover: formData.cover || FILM_PLACEHOLDER_COVER },
+      currentFilm,
+    );
 
     const nextFilms = formData.id
       ? data.map((film) =>
@@ -272,7 +250,7 @@ export const OutsideAgency: React.FC<OutsideAgencyProps> = ({
         onSubmit={handleFormSubmit}
         initialData={initialFormData}
         defaultCover={FILM_PLACEHOLDER_COVER}
-        accountType={accountType}
+        profile={profile}
       />
     </section>
   );

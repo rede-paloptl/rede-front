@@ -41,6 +41,7 @@ import {
 import type { SignupPayload } from "@/actions/authentication";
 
 import { eraseCookie } from "@/actions/cookie";
+import { endCurrentSession } from "@/actions/sessions";
 
 
 export interface AuthInterface {
@@ -52,7 +53,8 @@ export interface AuthInterface {
 
     signInUsingEmailAndPassword: (
         email: string,
-        password: string
+        password: string,
+        turnstileToken?: string
     ) => Promise<LoginUsingEmailAndPassResponseType>;
 
     signInUsingGoogle: (
@@ -164,8 +166,8 @@ export const AuthProvider = ({
     /**
      * Login.
      */
-    const signInUsingEmailAndPassword = async (email: string, password: string) => {
-        const response = await loginUsingEmailAndPassword(email, password);
+    const signInUsingEmailAndPassword = async (email: string, password: string, turnstileToken?: string) => {
+        const response = await loginUsingEmailAndPassword(email, password, turnstileToken);
 
         if (response?.user && response?.token) {
             updaInternalDataState({ profileData: response.user, token: response.token });
@@ -299,6 +301,9 @@ export const AuthProvider = ({
      */
     const signOut = useCallback(
         async (path?: string) => {
+            // Antes de limpar: o pedido precisa do token para fechar a sessao.
+            await endCurrentSession();
+
             cleanSession();
 
             setLoading(false);

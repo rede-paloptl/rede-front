@@ -2,18 +2,22 @@
 
 import { customBlur } from '@/app/fonts';
 import type { SignupPayload } from '@/actions/authentication';
-import { User } from '@/types/User';
+import { AccountType, CompanyType, User } from '@/types/User';
 import { Heading } from "../ui/heading"
 import { Text } from '../ui/text';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '../ui/button';
 import { Building2, ChevronRight, MailCheck, UserRound } from 'lucide-react';
 import { Input } from '../ui/Input';
-import { GoogleIcon } from '@/icons/GoogleIcon';
 import { useAuth } from '@/hooks/useAuth';
-import { signInWithGoogle } from '@/lib/googleAuth';
+import type { GoogleSignInResult } from '@/lib/googleAuth';
 import { ResendConfirmation } from './ResendConfirmation';
+import { GoogleSignInButton } from './GoogleSignInButton';
+import { POST_AUTH_REDIRECT } from './GuestOnly';
+import { TURNSTILE_SITE_KEY, TurnstileHandle, TurnstileWidget } from './TurnstileWidget';
+import { Select } from '../ui/select';
+import { companyTypeOptions } from './data';
 
 const normalizeUsernameBase = (value: string) => {
     return value
@@ -34,7 +38,7 @@ const generateUsername = (user: User) => {
 };
 
 export const Signup: React.FC = () => {
-    const { sigNup } = useAuth();
+    const { sigNup, signInUsingGoogle } = useAuth();
 
     // if (loading) {
     //     return <div>Loading...</div>;
@@ -48,7 +52,8 @@ export const Signup: React.FC = () => {
     const [message, setMessage] = useState("");
     const [showMessaage, setShowMessaage] = useState(false);
     const [requireConfirmation, setRequireConfirmation] = useState(false);
-    const [googleLoading, setGoogleLoading] = useState(false);
+    // ID token do Google, enviado no signup para o backend o verificar.
+    const [googleIdToken, setGoogleIdToken] = useState<string>();
     const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     // Email da conta criada que aguarda confirmacao: troca o formulario pelo ecra "verifique o seu email"
@@ -60,7 +65,10 @@ export const Signup: React.FC = () => {
         email: string;
     }>();
 
-    const canAdvance = acceptedTerms;
+    // Captcha so no signup por email; no Google a prova e o ID token.
+    const [turnstileToken, setTurnstileToken] = useState("");
+    const turnstileRef = useRef<TurnstileHandle>(null);
+    const needsTurnstile = Boolean(TURNSTILE_SITE_KEY) && !googleProfile;
 
     const [register, setRegister] = useState<User>({
         name: "",
@@ -87,33 +95,59 @@ export const Signup: React.FC = () => {
             username: ""
         }
     });
-    const handleGoogleSignup = async () => {
-        setShowMessaage(false);
-        setGoogleLoading(true);
+    // Nome com pelo menos 2 caracteres e email valido, como exige a API.
+    const hasRequiredFields = register.name.trim().length >= 2 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(register.email.trim());
+    const canAdvance = hasRequiredFields && acceptedTerms && (!needsTurnstile || turnstileToken.length > 0);
 
-        try {
-            const { profile } = await signInWithGoogle();
+    // O sub-tipo so existe nas contas de empresa; comeca em "empresa".
+    const updateAccountType = (accountType: AccountType) => {
+        setRegister((lastState) => {
+            const { companyType, ...profileData } = lastState.profileData;
 
-            setGoogleProfile(profile);
-            setRegister((lastState) => ({
+            return {
                 ...lastState,
-                name: profile.name || lastState.name,
-                email: profile.email || lastState.email,
-                imageUrl: profile.image || lastState.imageUrl,
-                loginType: "google",
-            }));
-        } catch (err) {
-            setRequireConfirmation(false);
-            setShowMessaage(true);
-            setMessage(err instanceof Error ? err.message : "Não foi possível continuar com o Google.");
+                profileData: accountType === 'company'
+                    ? { ...profileData, accountType, companyType: companyType ?? 'empresa' }
+                    : { ...profileData, accountType },
+            };
+        });
+    }
 
-            setTimeout(() => {
-                setShowMessaage(false);
-                setMessage("");
-            }, 3000);
-        } finally {
-            setGoogleLoading(false);
-        }
+    const showError = (text: string) => {
+        setRequireConfirmation(false);
+        setShowMessaage(true);
+        setMessage(text);
+
+        setTimeout(() => {
+            setShowMessaage(false);
+            setMessage("");
+        }, 3000);
+    }
+
+    // So preenche nome e email com os dados do Google; o utilizador segue o fluxo normal.
+    const handleGoogleSignup = ({ idToken, profile }: GoogleSignInResult) => {
+        setShowMessaage(false);
+        setGoogleIdToken(idToken);
+        setGoogleProfile(profile);
+        setRegister((lastState) => ({
+            ...lastState,
+            name: profile.name || lastState.name,
+            email: profile.email || lastState.email,
+            loginType: "google",
+            // Foto do Google como foto de perfil inicial; pode ser trocada depois.
+            imageUrl: profile.image || lastState.imageUrl,
+        }));
+    }
+
+    const handleCancelGoogle = () => {
+        setGoogleIdToken(undefined);
+        setGoogleProfile(undefined);
+        setRegister((lastState) => ({
+            ...lastState,
+            email: "",
+            loginType: "normal",
+            imageUrl: undefined,
+        }));
     }
 
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -130,9 +164,13 @@ export const Signup: React.FC = () => {
                     username: register.profileData.username?.trim() || generateUsername(register),
                 },
                 confirmationBaseUrl: window.location.origin,
+                ...(register.loginType === "google" && googleIdToken ? { idToken: googleIdToken } : {}),
+                ...(register.loginType === "normal" && turnstileToken ? { turnstileToken } : {}),
             };
             const responseData = await sigNup(signupData);
             if (responseData?.error) {
+                // O token ja foi gasto nesta tentativa: pede um novo.
+                turnstileRef.current?.reset();
                 setRequireConfirmation(false);
                 setShowMessaage(true);
                 setMessage(responseData?.message || "Ocorreu um erro ao criar a conta.");
@@ -149,8 +187,27 @@ export const Signup: React.FC = () => {
                 setRequireConfirmation(requiresEmailConfirmation);
 
                 if (user.loginType === "google") {
+                    // O Google ja confirmou o email: inicia sessao com o mesmo ID token
+                    // e segue para o onboarding, como no fim da confirmacao por email.
+                    // O GuestOnly faz o redirecionamento assim que a sessao existir.
+                    try {
+                        window.sessionStorage.setItem(POST_AUTH_REDIRECT, "/onboarding");
+                    } catch {
+                        // sessionStorage indisponivel: o GuestOnly manda para o perfil.
+                    }
+
+                    const loginResponse = googleIdToken ? await signInUsingGoogle({ idToken: googleIdToken }) : undefined;
+
+                    if (loginResponse?.user && loginResponse?.token) return;
+
+                    try {
+                        window.sessionStorage.removeItem(POST_AUTH_REDIRECT);
+                    } catch {
+                        // ignorado
+                    }
+
                     setShowMessaage(true);
-                    setMessage("Conta criada com sucesso através do Google.<br/> Pode agora iniciar sessão.");
+                    setMessage("Conta criada com sucesso através do Google.<br/> Inicie sessão para continuar.");
 
                     setTimeout(() => {
                         setShowMessaage(false);
@@ -179,8 +236,9 @@ export const Signup: React.FC = () => {
                     </div>
                     <Heading className={`text-rede-white ${customBlur.className} text-[48px] leading-14`}>Verifique o seu email</Heading>
                     <Text className="text-[14px] leading-5 font-medium">
-                        Enviámos um link de confirmação para <span className="text-rede-yellow font-bold break-all">{pendingConfirmationEmail}</span>.
-                        Abra-o para definir a sua palavra-passe e ativar a conta.
+                        Enviamos um link de confirmação para
+                        <br/> <span className="text-rede-yellow font-bold break-all">{pendingConfirmationEmail}</span>.
+                        <br/>Abra-o para definir a sua palavra-passe e ativar a conta.
                     </Text>
                     <Text className="text-[14px] leading-5 text-rede-white/70">
                         O link expira em 24 horas. Se não o encontrar, verifique a pasta de spam.
@@ -228,7 +286,7 @@ export const Signup: React.FC = () => {
                             icon={<UserRound width={14} height={14} />}
                             className={register.profileData.accountType === 'individual' ? 'text-rede-surface' : ''}
                             containerClassName='w-full'
-                            onClick={() => setRegister((lastState) => ({ ...lastState, profileData: { ...lastState.profileData, accountType: 'individual' } }))}
+                            onClick={() => updateAccountType('individual')}
                         >
                             Individual
                         </Button>
@@ -238,11 +296,23 @@ export const Signup: React.FC = () => {
                             icon={<Building2 width={14} height={14} />}
                             className={register.profileData.accountType === 'company' ? 'text-rede-surface' : ''}
                             containerClassName='w-full'
-                            onClick={() => setRegister((lastState) => ({ ...lastState, profileData: { ...lastState.profileData, accountType: 'company' } }))}
+                            onClick={() => updateAccountType('company')}
                         >
                             Empresa
                         </Button>
                     </div>
+
+                    {register.profileData.accountType === 'company' && (
+                        <div className='flex flex-col gap-2'>
+                            <label className='text-[20px] leading-7'>Tipo de entidade</label>
+                            <Select
+                                variant={"secondary"}
+                                options={companyTypeOptions}
+                                value={register.profileData.companyType}
+                                onChange={(value) => setRegister((lastState) => ({ ...lastState, profileData: { ...lastState.profileData, companyType: value as CompanyType } }))}
+                            />
+                        </div>
+                    )}
 
                     <div className='flex flex-col gap-2'>
                         <label className='text-[20px] leading-7' htmlFor='nameField'>Nome</label>
@@ -251,7 +321,7 @@ export const Signup: React.FC = () => {
 
                     <div className='flex flex-col gap-2'>
                         <label className='text-[20px] leading-7' htmlFor='emailField'>Email</label>
-                        <Input variant={"secondary"} type='email' placeholder='seu@email.com' className='w-full' id='emailField' value={register.email} onChange={(event) => setRegister((lastState) => ({ ...lastState, email: event.target.value }))} />
+                        <Input variant={"secondary"} type='email' placeholder='seu@email.com' className='w-full' id='emailField' value={register.email} readOnly={register.loginType === "google"} onChange={(event) => setRegister((lastState) => ({ ...lastState, email: event.target.value }))} />
                     </div>
 
                     {googleProfile && (
@@ -260,10 +330,13 @@ export const Signup: React.FC = () => {
                                 className='h-10 w-10 rounded-full bg-cover bg-center bg-rede-white/10'
                                 style={{ backgroundImage: googleProfile.image ? `url(${googleProfile.image})` : undefined }}
                             />
-                            <div className='min-w-0'>
+                            <div className='min-w-0 flex-1'>
                                 <Text className='text-[15px] leading-5.5 font-bold truncate'>{googleProfile.name}</Text>
                                 <Text className='text-[14px] leading-5 text-rede-white/70 truncate'>{googleProfile.email}</Text>
                             </div>
+                            <button type='button' onClick={handleCancelGoogle} className='text-[13px] leading-5 font-bold text-rede-yellow shrink-0 cursor-pointer'>
+                                Usar outro email
+                            </button>
                         </div>
                     )}
 
@@ -283,19 +356,23 @@ export const Signup: React.FC = () => {
                         />
                         <Text id='termsAgreementText' as='div' className='text-[14px] leading-5 font-medium'>
                             <label htmlFor='acceptedTermsField' className='cursor-pointer'>Aceito</label>&nbsp;
-                            <Link href="/assets/termos-de-utilização.pdf" target='_blank' className='text-rede-yellow'>Termos de Uso</Link>
+                            <Link href="/assets/termos-de-utilizacao.pdf" target='_blank' className='text-rede-yellow'>Termos de Uso</Link>
                             &nbsp;e&nbsp;
-                            <Link href="/assets/política-de-privacidade.pdf" target='_blank' className='text-rede-yellow'>Política de Privacidade</Link>
+                            <Link href="/assets/politica-de-privacidade.pdf" target='_blank' className='text-rede-yellow'>Política de Privacidade</Link>
                         </Text>
                     </div>
+
+                    {needsTurnstile &&
+                        <TurnstileWidget ref={turnstileRef} onTokenChange={setTurnstileToken} />
+                    }
 
                     <Button type='submit' containerClassName='w-full' className='text-rede-surface' icon={<ChevronRight width={14} height={14} />} iconPosition='right' disabled={!canAdvance || isSubmitting}>
                         {isSubmitting ? "A criar conta..." : "Avançar"}
                     </Button>
 
-                    <Button type='button' variant={"secondary"} icon={<GoogleIcon width={12} height={12} />} className='w-full' containerClassName='w-full' disabled={googleLoading || !canAdvance} onClick={handleGoogleSignup}>
-                        {googleLoading ? "A ligar ao Google..." : "Continue com Google"}
-                    </Button>
+                    {!googleProfile &&
+                        <GoogleSignInButton text='signup_with' onSuccess={handleGoogleSignup} onError={showError} />
+                    }
                 </div>
                 <div className='w-full flex justify-center mt-8 mb-2'>
                     <Text className='text-[14px] leading-5 font-bold text-center flex items-center gap-2.5'>

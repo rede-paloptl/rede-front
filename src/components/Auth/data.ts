@@ -1,14 +1,8 @@
 import { SocialNetwork } from "@/types/Profile";
+import { CompanyType } from "@/types/User";
 
-export const countries = [
-    { value: 'angola', label: 'Angola', cities: ['Luanda', 'Benguela', 'Huambo', 'Lubango', 'Cabinda'] },
-    { value: 'cabo-verde', label: 'Cabo Verde', cities: ['Praia', 'Mindelo', 'Santa Maria', 'Assomada'] },
-    { value: 'guine-bissau', label: 'Guiné-Bissau', cities: ['Bissau', 'Bafatá', 'Gabú', 'Cacheu'] },
-    { value: 'mocambique', label: 'Moçambique', cities: ['Maputo', 'Beira', 'Nampula', 'Matola', 'Quelimane'] },
-    { value: 'portugal', label: 'Portugal', cities: ['Lisboa', 'Porto', 'Coimbra', 'Faro'] },
-    { value: 'sao-tome-principe', label: 'São Tomé e Príncipe', cities: ['São Tomé', 'Santo António', 'Trindade'] },
-    { value: 'timor-leste', label: 'Timor-Leste', cities: ['Díli', 'Baucau', 'Maliana', 'Suai', 'Liquiçá'] },
-];
+// País, cidades e serviços vêm das listas geridas no painel (Configurações):
+// ver lib/taxonomy.ts.
 
 export const socialFields: { key: SocialNetwork; label: string; placeholder: string }[] = [
     { key: 'facebook', label: 'Facebook', placeholder: 'https://facebook.com/nome' },
@@ -20,64 +14,10 @@ export const socialFields: { key: SocialNetwork; label: string; placeholder: str
     { key: 'website', label: 'Website', placeholder: 'https://site.com' },
 ];
 
-
-export const services = [
-    'Scriptwriting',
-    '2D Animation',
-    '3D Animation',
-    'Advertising Production',
-    'Audiovisual AI',
-    'Animation Production',
-    'Archive Management',
-    'Augmented Reality',
-    'Camera Operation',
-    'Casting',
-    'Catering',
-    'Cinema Distribution',
-    'Cinema Exhibition',
-    'Cinematography',
-    'Color Grading',
-    'Content Aggregation',
-    'Digital Content Production',
-    'Digital Distribution',
-    'Digitization',
-    'Drone Operation',
-    'Dubbing',
-    'Editing',
-    'Festival Organization',
-    'Film Marketing',
-    'Film Production',
-    'Fixers',
-    'Graphic and Motion Design',
-    'Immersive Content',
-    'International Sales',
-    'Live Streaming',
-    'Location Scouting',
-    'Logistics & Transport',
-    'Mastering & Delivery',
-    'Mentorship',
-    'Mobile Cinema',
-    'Motion Capture',
-    'Music Video Production',
-    'Programming and Curation',
-    'Research & Development',
-    'Residencies and Labs',
-    'Restoration',
-    'Script Doctoring',
-    'Series Bible',
-    'Set Design & Art Direction',
-    'Social Media Management',
-    'Sound Design',
-    'Sound Mixing',
-    'Sound Recording',
-    'Storyboarding',
-    'Subtitling',
-    'Technical Training',
-    'Trailer Production',
-    'TV Production',
-    'Video Mapping',
-    'Videoart',
-    'VR',
-    'Visual Effects',
-    'Workshops',
-].map((service) => ({ label: service, value: service }));
+// Sub-tipos de uma conta de empresa. Cada um e um tipo de perfil da Rede, com
+// as suas proprias competencias (ver network/data.ts).
+export const companyTypeOptions: { value: CompanyType; label: string }[] = [
+    { value: 'empresa', label: 'Empresa' },
+    { value: 'festival', label: 'Festival' },
+    { value: 'instituicao', label: 'Instituição' },
+];

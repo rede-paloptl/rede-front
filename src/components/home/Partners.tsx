@@ -17,10 +17,33 @@ type Logo = {
   className?: string;
 };
 
+/** Zona de um PNG que tem conteúdo, em píxeis da imagem original. */
+type Crop = { x: number; y: number; width: number; height: number };
+
+type WordmarkPart = {
+  src: string;
+  /** Tamanho real do PNG. */
+  imageWidth: number;
+  imageHeight: number;
+  crop: Crop;
+};
+
+/**
+ * Um logótipo que chega em vários PNG que se completam (ex: "PALOP-TL" + "UE").
+ * Cada parte é recortada à zona com conteúdo e as partes ficam lado a lado
+ * numa só caixa, alinhadas pela mesma linha de base.
+ */
+type Wordmark = {
+  alt: string;
+  parts: WordmarkPart[];
+};
+
+type PartnerLogo = Logo | Wordmark;
+
 type PartnerGroupData = {
   title: string;
   align?: "left" | "right";
-  logos: Logo[];
+  logos: PartnerLogo[];
 };
 
 type PartnerRow = {
@@ -114,19 +137,26 @@ const PARTNER_ROWS: PartnerRow[] = [
           src: "/assets/partners/uniao-europeia.png",
           alt: "União Europeia",
         },
-        // Estes dois andam sempre juntos. Em ecrãs pequenos os LogoBox têm
-        // largura fixa e não cabem dois por linha, por isso o par passa a
-        // ocupar meia linha cada até ao lg, onde volta à largura normal. A
-        // margem negativa anula o gap e encosta um ao outro.
+        // "PALOP-TL UE" lê-se como um só logótipo, mas vem em dois PNG com o
+        // mesmo tamanho e a mesma altura de letra. O mesmo recorte vertical
+        // mantém a linha de base; a margem transparente que fica à direita do
+        // primeiro e à esquerda do segundo faz de espaço entre as palavras.
         {
-          src: "/assets/partners/palop-tl.png",
-          alt: "PALOP e Timor-Leste",
-          className: "lg:!w-[200px]",
-        },
-        {
-          src: "/assets/partners/ue.png",
-          alt: "União Europeia",
-          className: "lg:-ml-2 lg:!w-[200px]",
+          alt: "PALOP-TL UE",
+          parts: [
+            {
+              src: "/assets/partners/palop-tl.png",
+              imageWidth: 1528,
+              imageHeight: 1080,
+              crop: { x: 255, y: 394, width: 1273, height: 307 },
+            },
+            {
+              src: "/assets/partners/ue.png",
+              imageWidth: 1528,
+              imageHeight: 1080,
+              crop: { x: 0, y: 394, width: 326, height: 307 },
+            },
+          ],
         },
       ],
     },
@@ -173,6 +203,47 @@ function LogoBox({
   );
 }
 
+function WordmarkPartImage({ src, imageWidth, imageHeight, crop }: WordmarkPart) {
+  // A caixa tem as proporções do recorte; a imagem inteira é escalada e
+  // deslocada em percentagens da caixa, para o recorte a preencher.
+  return (
+    <div
+      className="relative h-full shrink-0 overflow-hidden"
+      style={{ aspectRatio: `${crop.width} / ${crop.height}` }}
+    >
+      <Image
+        src={src}
+        width={imageWidth}
+        height={imageHeight}
+        alt=""
+        className="absolute max-w-none"
+        style={{
+          width: `${(imageWidth / crop.width) * 100}%`,
+          height: `${(imageHeight / crop.height) * 100}%`,
+          left: `${(-crop.x / crop.width) * 100}%`,
+          top: `${(-crop.y / crop.height) * 100}%`,
+        }}
+      />
+    </div>
+  );
+}
+
+function WordmarkBox({ alt, parts }: Wordmark) {
+  return (
+    // Mesma altura das outras caixas; o texto ocupa a mesma fracção da
+    // altura que ocupava quando cada PNG tinha a sua caixa.
+    <div role="img" aria-label={alt} className="flex h-28 shrink-0 items-center sm:h-32 lg:h-37.5">
+      <div className="flex h-[27%]">
+        {parts.map((part) => (
+          <WordmarkPartImage key={part.src} {...part} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const isWordmark = (logo: PartnerLogo): logo is Wordmark => "parts" in logo;
+
 function PartnerGroup({
   title,
   align = "left",
@@ -191,34 +262,13 @@ function PartnerGroup({
         className={`flex h-auto w-full flex-wrap gap-1 lg:h-37.5 lg:w-auto lg:flex-nowrap ${align === "right" ? "lg:justify-end" : "justify-start"
           }`}
       >
-        {logos.map((logo, index) => {
-          const nextLogo = logos[index + 1];
-          const previousLogo = logos[index - 1];
-          const isPalopTlPair =
-            logo.src === "/assets/partners/palop-tl.png" &&
-            nextLogo?.src === "/assets/partners/ue.png";
-          const isPairedUeLogo =
-            logo.src === "/assets/partners/ue.png" &&
-            previousLogo?.src === "/assets/partners/palop-tl.png";
-
-          if (isPalopTlPair) {
-            return (
-              <div
-                key={`${logo.src}-${nextLogo.src}`}
-                className="flex w-full max-w-[400px] shrink-0 flex-nowrap gap-0 lg:w-auto lg:max-w-none"
-              >
-                <LogoBox {...logo} className="!w-1/2 lg:!w-[200px]" />
-                <LogoBox {...nextLogo} className="-ml-2 !w-1/2 lg:!w-[200px] -ml-[45px]" />
-              </div>
-            );
-          }
-
-          if (isPairedUeLogo) {
-            return null;
-          }
-
-          return <LogoBox key={`${logo.src}-${index}`} {...logo} />;
-        })}
+        {logos.map((logo, index) =>
+          isWordmark(logo) ? (
+            <WordmarkBox key={logo.alt} {...logo} />
+          ) : (
+            <LogoBox key={`${logo.src}-${index}`} {...logo} />
+          ),
+        )}
       </div>
     </div>
   );

@@ -3,31 +3,39 @@ import { Tag } from "@/components/ui/tag";
 import { Heading } from "@/components/ui/heading";
 import { Select, SelectOption } from "@/components/ui/select";
 import {
-    getCategoriesByAccountType,
-    getSubCategoriesByAccountType,
+    getProfileCategories,
+    getProfileSubCategories,
 } from "@/components/network/data";
 import { User } from "@/types/User";
+import { getTaxonomy, type TaxonomyKind } from "@/lib/taxonomy";
 import { X } from "lucide-react";
 import { Dispatch, SetStateAction, useMemo } from "react";
 import { Text } from "@/components/ui/text";
 
 type ProfileData = User["profileData"];
 
+// As competencias guardam ids das listas (Configuracoes). Registos antigos
+// podem ter o nome: comparamos sempre pelo id e mostramos o nome.
+const skillKinds: TaxonomyKind[] = ["profile-subcategory", "profile-category"];
+export const toSkillId = (value: string) => getTaxonomy().id(value, skillKinds);
+export const toSkillLabel = (value: string) => getTaxonomy().label(value, skillKinds);
+
 // As competencias principais (coreSkills) sao a Categoria do perfil, e saem
-// da lista de categorias do tipo de conta.
+// da lista de categorias do seu tipo (profissionais, empresa, festival ou
+// instituicao).
 export const getCoreSkillOptions = (profileData?: ProfileData): SelectOption[] =>
-    getCategoriesByAccountType(profileData?.accountType);
+    getProfileCategories(profileData);
 
 // Esta seccao guarda profileData.skills, que e a Sub-categoria com que a
 // pesquisa da rede compara. Um perfil de empresa escolhe entre as
 // sub-categorias do seu tipo; profissionais nao tem nivel abaixo da
 // profissao, por isso continuam a escolher entre as proprias categorias.
 export const getSkillOptions = (profileData?: ProfileData): SelectOption[] => {
-    const subCategories = getSubCategoriesByAccountType(profileData?.accountType);
+    const subCategories = getProfileSubCategories(profileData);
 
     return subCategories.length > 0
         ? subCategories
-        : getCategoriesByAccountType(profileData?.accountType);
+        : getProfileCategories(profileData);
 };
 
 type SectionEditSkillsProps = {
@@ -52,26 +60,23 @@ export const SectionEditSkills: React.FC<SectionEditSkillsProps> = ({
     isSaving = false,
     onSaveSkills,
 }) => {
+    const skillIds = useMemo(() => skills.map(toSkillId), [skills]);
+
     const skillOptions = useMemo(
-        () => getSkillOptions(profileData).filter(
-            (option) => !skills.includes(option.label) && !skills.includes(option.value),
-        ),
-        [profileData, skills],
+        () => getSkillOptions(profileData).filter((option) => !skillIds.includes(option.value)),
+        [profileData, skillIds],
     );
 
     const removeSkill = (skill: string) => {
         if (isSaving) return;
 
-        void onSaveSkills?.(skills.filter((item) => item !== skill));
+        void onSaveSkills?.(skillIds.filter((item) => item !== toSkillId(skill)));
     };
 
     const addSkill = (value: string) => {
-        const selectedOption = skillOptions.find((option) => option.value === value);
-        const skill = selectedOption?.label ?? value;
+        if (isSaving || !value || skillIds.includes(value)) return;
 
-        if (isSaving || !skill || skills.includes(skill)) return;
-
-        void onSaveSkills?.([...skills, skill]);
+        void onSaveSkills?.([...skillIds, value]);
     };
 
     return (
@@ -86,11 +91,11 @@ export const SectionEditSkills: React.FC<SectionEditSkillsProps> = ({
                 <div className="flex flex-wrap gap-2.5 pt-5 pb-5 border-b border-b-white/900">
                     {skills.length > 0 ? skills.map((skill) => (
                         <Tag key={skill} className="flex gap-1 items-center">
-                            {skill}
+                            {toSkillLabel(skill)}
                             {isAuthenticated && (
                                 <button
                                     type="button"
-                                    aria-label={`Remover ${skill}`}
+                                    aria-label={`Remover ${toSkillLabel(skill)}`}
                                     disabled={isSaving}
                                     onClick={() => removeSkill(skill)}
                                     className="inline-flex cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"

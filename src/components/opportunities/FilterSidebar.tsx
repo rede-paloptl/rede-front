@@ -6,18 +6,13 @@ import { Button } from '@/components/ui/button'
 import { Heading } from '../ui/heading'
 import { Input } from '../ui/Input'
 import { Select, withClearOption } from '../ui/select'
-import { opportunityCategories } from './data'
-import { countriesList, SelectItemType } from '../network/filters'
+import { getTaxonomy } from '@/lib/taxonomy'
 import { OpportunityFilters } from './actions'
 import {
+  getContentCategoryOptions,
   getNewsCategoryForSubCategory,
   getNewsSubCategoryOptions,
 } from '../news/categories'
-
-const categories: SelectItemType[] = opportunityCategories.map((category) => ({
-  label: category.label,
-  value: category.value,
-}))
 
 type FilterSidebarProps = {
   filters: OpportunityFilters
@@ -120,7 +115,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
               value={selectedCountry}
               placeholder="Selecione o país"
               options={withClearOption(
-                countriesList,
+                getTaxonomy().countriesList,
                 selectedCountry,
                 'Todos os países',
               )}
@@ -143,7 +138,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
               value={selectedCategory}
               placeholder="Selecione a categoria"
               options={withClearOption(
-                categories,
+                getContentCategoryOptions(),
                 selectedCategory,
                 'Todas as categorias',
               )}

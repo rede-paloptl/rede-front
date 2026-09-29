@@ -5,7 +5,8 @@ import { Text } from "../ui/text";
 import { FormEvent, useMemo, useState } from "react";
 import Link from "next/link";
 import { Select } from "../ui/select";
-import { countries, services, socialFields } from "./data";
+import { socialFields } from "./data";
+import { getProfileCityOptions, getProfileCountryOptions, getTaxonomy, isProfileCountry } from "@/lib/taxonomy";
 import { SelectMultiple } from "../ui/select-multiple";
 import { SocialNetwork } from "@/types/Profile";
 import { User } from "@/types/User";
@@ -17,15 +18,6 @@ import { useRouter } from "next/navigation";
 
 type ProfileData = User["profileData"];
 type OnboardingUser = Partial<Omit<User, "profileData">> & { profileData?: Partial<ProfileData> | null };
-// Valores tal como a API os guarda (sem acentos). O que o utilizador ve e a
-// label de data.ts ("Moçambique"); isto e so o valor transmitido.
-type ApiCountry =
-    | "Angola"
-    | "Cabo Verde"
-    | "Guine-Bissau"
-    | "Mocambique"
-    | "Sao Tome e Principe"
-    | "Timor-Leste";
 type MiniStepKey = "identity" | "contact" | "association" | "services" | "social";
 type MiniStep = {
     key: MiniStepKey;
@@ -67,21 +59,8 @@ const formatDateField = (value?: string | Date) => {
 
     return String(value).slice(0, 10);
 };
-const apiCountryByFormValue: Record<string, ApiCountry> = {
-    angola: "Angola",
-    "cabo-verde": "Cabo Verde",
-    "guine-bissau": "Guine-Bissau",
-    mocambique: "Mocambique",
-    "sao-tome-principe": "Sao Tome e Principe",
-    "timor-leste": "Timor-Leste",
-};
-const formCountryByApiValue = Object.entries(apiCountryByFormValue).reduce<Record<string, string>>(
-    (countriesByApiValue, [formValue, apiValue]) => ({
-        ...countriesByApiValue,
-        [apiValue]: formValue,
-    }),
-    {}
-);
+// País, cidade e serviços usam os ids das listas geridas no painel
+// (Configurações). Um registo antigo pode ter o nome: converte-se ao abrir.
 const isValidUrl = (value: string) => {
     try {
         new URL(value);
@@ -106,7 +85,6 @@ const sanitizeProfileData = (profileData: ProfileData): ProfileData => {
 
     return {
         ...profileData,
-        country: apiCountryByFormValue[profileData.country] ?? profileData.country,
         socialLinks: Object.keys(socialLinks).length > 0 ? socialLinks : undefined,
     };
 };
@@ -114,14 +92,19 @@ const buildRegisterFromUser = (user?: OnboardingUser | null): User => {
     if (!user) return defaultRegister;
 
     const userProfileData = user.profileData ?? {};
-    const country = userProfileData.country ? (formCountryByApiValue[userProfileData.country] ?? userProfileData.country) : "";
+    const taxonomy = getTaxonomy();
+    const country = userProfileData.country ? taxonomy.id(userProfileData.country, ["country"]) : "";
+    const city = userProfileData.city ? taxonomy.id(userProfileData.city, ["city"], country || null) : "";
     const hydratedProfileData: ProfileData = {
         ...defaultRegister.profileData,
         ...userProfileData,
         country,
+        city,
         birthDate: formatDateField(userProfileData.birthDate),
         creationDate: formatDateField(userProfileData.creationDate),
-        services: Array.isArray(userProfileData.services) ? userProfileData.services : [],
+        services: Array.isArray(userProfileData.services)
+            ? userProfileData.services.map((service) => taxonomy.id(service, ["service"]))
+            : [],
     };
 
     return {
@@ -179,6 +162,33 @@ const getMiniSteps = (
         },
     ];
 };
+const hasText = (value?: string) => Boolean(value?.trim());
+const isValidEmail = (value?: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value?.trim() ?? "");
+
+// Cada mini-step so deixa avancar com os seus campos preenchidos; as redes
+// sociais sao opcionais. Campos que so aparecem com "Sim" so contam nesse caso.
+const isMiniStepComplete = (key: MiniStepKey, register: User): boolean => {
+    const profileData = register.profileData;
+
+    switch (key) {
+        case "identity":
+            return profileData.accountType === "individual"
+                ? hasText(register.name) && hasText(profileData.artisticName) && Boolean(profileData.birthDate)
+                : hasText(profileData.commercialName) && Boolean(profileData.creationDate);
+        case "contact":
+            return isProfileCountry(profileData.country)
+                && Boolean(profileData.city)
+                && isValidEmail(profileData.professionalEmail)
+                && hasText(profileData.professionalPhone);
+        case "association":
+            return !profileData.associatedWithCompany?.status || hasText(profileData.associatedWithCompany.companyName);
+        case "services":
+            return (profileData.services.length > 0 || hasText(profileData.otherService))
+                && (!profileData.rentsEquipment?.status || hasText(profileData.rentsEquipment.equipmentName));
+        case "social":
+            return true;
+    }
+};
 export const OnBoarding: React.FC = () => {
     const router = useRouter();
     const { user, updateLoggedUserData, expireSession } = useAuth();
@@ -191,6 +201,10 @@ export const OnBoarding: React.FC = () => {
     const activeMiniStep = miniSteps[miniStepIndex] ?? miniSteps[0];
     const isFirstMiniStep = miniStepIndex === 0;
     const isLastMiniStep = miniStepIndex === miniSteps.length - 1;
+    const canContinue = isMiniStepComplete(activeMiniStep.key, register);
+    // Um mini-step so e alcancavel com todos os anteriores preenchidos.
+    const canReachMiniStep = (index: number) =>
+        miniSteps.slice(0, index).every((step) => isMiniStepComplete(step.key, register));
 
 
     const updateProfileData = <K extends keyof ProfileData>(key: K, value: ProfileData[K]) => {
@@ -212,14 +226,17 @@ export const OnBoarding: React.FC = () => {
             }
         }));
     };
-    const countryOptions = useMemo(() => countries.filter((country) => country.value in apiCountryByFormValue), []);
-    const cityOptions = useMemo(() => {
-        return countries.find((item) => item.value === register.profileData.country)?.cities.map((item) => ({
-            label: item,
-            value: item,
-        })) ?? [];
-    }, [register.profileData.country]);
+    // Os da lista e, no fim, "Outro"; as cidades terminam em "Outra".
+    const countryOptions = getProfileCountryOptions();
+    const serviceOptions = getTaxonomy().services;
+    // Todas as cidades do país, em qualquer província.
+    const cityOptions = useMemo(
+        () => getProfileCityOptions(register.profileData.country),
+        [register.profileData.country],
+    );
     const goToNextMiniStep = () => {
+        if (!canContinue) return;
+
         setMiniStepIndex((currentStep) => Math.min(currentStep + 1, miniSteps.length - 1));
     };
     const goToPreviousMiniStep = () => {
@@ -247,7 +264,7 @@ export const OnBoarding: React.FC = () => {
     const saveOnboarding = async () => {
         setMessage("");
 
-        if (!apiCountryByFormValue[register.profileData.country]) {
+        if (!isProfileCountry(register.profileData.country)) {
             setMessage("Selecione um pais valido.");
             setMiniStepIndex(1);
             return;
@@ -279,7 +296,7 @@ export const OnBoarding: React.FC = () => {
         }
 
         if (response.error) {
-            setMessage(response.message || "Nao foi possivel atualizar os dados.");
+            setMessage(response.message || "Não foi possivel atualizar os dados.");
             setLoading(false);
             return;
         }
@@ -290,7 +307,7 @@ export const OnBoarding: React.FC = () => {
             return;
         }
 
-        setMessage(response.message || "Nao foi possivel atualizar os dados.");
+        setMessage(response.message || "Não foi possivel atualizar os dados.");
         setLoading(false);
     }
     const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -336,12 +353,9 @@ export const OnBoarding: React.FC = () => {
                 </div>
             );
         }
+        // O nome da conta ja foi dado no passo 1 do registo.
         return (
             <div className='grid grid-cols-1 gap-4'>
-                <div className={fieldGroupClassName}>
-                    <label className={labelClassName} htmlFor='nameField'>Nome</label>
-                    <Input variant={"secondary"} placeholder='Nome da conta' id='nameField' value={register.name} onChange={(event) => setRegister((lastState) => ({ ...lastState, name: event.target.value }))} />
-                </div>
                 <div className={fieldGroupClassName}>
                     <label className={labelClassName} htmlFor='commercialNameField'>Nome comercial</label>
                     <Input variant={"secondary"} placeholder='Nome comercial' id='commercialNameField' value={register.profileData.commercialName} onChange={(event) => updateProfileData("commercialName", event.target.value)} />
@@ -351,7 +365,7 @@ export const OnBoarding: React.FC = () => {
                     <Input variant={"secondary"} type='date' id='creationDateField' value={register.profileData.creationDate} onChange={(event) => updateProfileData("creationDate", event.target.value)} />
                 </div>
                 <div className={fieldGroupClassName}>
-                    <label className={labelClassName}>A entidade esta registada?</label>
+                    <label className={labelClassName}>A entidade está registada?</label>
                     <Select variant={"secondary"} options={[{ label: 'Sim', value: 'yes' }, { label: 'Não', value: 'no' }]} value={register.profileData.isRegistered ? "yes" : "no"} onChange={(value) => updateProfileData("isRegistered", value === "yes")} />
                 </div>
             </div>
@@ -381,8 +395,8 @@ export const OnBoarding: React.FC = () => {
     );
     const renderAssociationStep = () => (
         <div className={fieldGroupClassName}>
-            <label className={labelClassName}>Esta associado a alguma empresa ou colectivo?</label>
-            <Select variant={"secondary"} options={[{ label: 'Nao', value: 'no' }, { label: 'Sim', value: 'yes' }]} value={register.profileData.associatedWithCompany?.status ? "yes" : "no"} onChange={(value) => {
+            <label className={labelClassName}>Está associado a alguma empresa ou colectivo?</label>
+            <Select variant={"secondary"} options={[{ label: 'Não', value: 'no' }, { label: 'Sim', value: 'yes' }]} value={register.profileData.associatedWithCompany?.status ? "yes" : "no"} onChange={(value) => {
                 setRegister((lastState) => {
                     return (value === "yes")
                         ? { ...lastState, profileData: { ...lastState.profileData, associatedWithCompany: { status: true, companyName: "" } } }
@@ -400,15 +414,15 @@ export const OnBoarding: React.FC = () => {
         <div className='grid grid-cols-1 gap-4'>
             <div className={fieldGroupClassName}>
                 <label className={labelClassName}>Servicos fornecidos</label>
-                <SelectMultiple variant={"secondary"} options={services} value={selectedServices} onChange={handleServicesChange} placeholder='Selecione todos os servicos' />
+                <SelectMultiple variant={"secondary"} options={serviceOptions} value={selectedServices} onChange={handleServicesChange} placeholder='Selecione todos os servicos' />
             </div>
             <div className={fieldGroupClassName}>
-                <label className={labelClassName} htmlFor='otherServiceField'>Acrescentar servico nao descrito</label>
+                <label className={labelClassName} htmlFor='otherServiceField'>Acrescentar servico não descrito</label>
                 <Input variant={"secondary"} placeholder='Outro servico' id='otherServiceField' value={register.profileData.otherService} onChange={(event) => updateProfileData("otherService", event.target.value)} />
             </div>
             <div className={fieldGroupClassName}>
                 <label className={labelClassName}>A empresa/organizacao fornece aluguer de equipamentos?</label>
-                <Select variant={"secondary"} options={[{ label: 'Nao', value: 'no' }, { label: 'Sim', value: 'yes' }]} value={register.profileData.rentsEquipment?.status ? "yes" : "none"} onChange={(value) => {
+                <Select variant={"secondary"} options={[{ label: 'Não', value: 'no' }, { label: 'Sim', value: 'yes' }]} value={register.profileData.rentsEquipment?.status ? "yes" : "none"} onChange={(value) => {
                     setRegister((lastState) => {
                         return (value === "yes")
                             ? { ...lastState, profileData: { ...lastState.profileData, rentsEquipment: { status: true, equipmentName: "" } } }
@@ -477,8 +491,9 @@ export const OnBoarding: React.FC = () => {
                                     type='button'
                                     key={step.key}
                                     aria-label={`Ir para ${step.title}`}
+                                    disabled={!canReachMiniStep(index)}
                                     onClick={() => setMiniStepIndex(index)}
-                                    className={`h-1.5 rounded-full transition-all duration-300 ${index <= miniStepIndex ? 'bg-rede-yellow' : 'bg-rede-white/15'}`}
+                                    className={`h-1.5 rounded-full transition-all duration-300 disabled:cursor-not-allowed ${index <= miniStepIndex ? 'bg-rede-yellow' : 'bg-rede-white/15'}`}
                                 />
                             ))}
                         </div>
@@ -491,21 +506,16 @@ export const OnBoarding: React.FC = () => {
                             {message}
                         </Text>
                     )}
-                    <div className='grid grid-cols-1 sm:grid-cols-3 gap-3'>
+                    <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
                         <Button type='button' variant={"secondary"} containerClassName='w-full' onClick={goToPreviousMiniStep} disabled={isFirstMiniStep || isLoading}>
                             Voltar
                         </Button>
-                        {!isLastMiniStep && (
-                            <Button type='button' variant={"secondary"} containerClassName='w-full' onClick={goToNextMiniStep} disabled={isLoading}>
-                                Pular
-                            </Button>
-                        )}
                         {isLastMiniStep ? (
-                            <Button type='button' containerClassName='w-full sm:col-span-2' className='text-rede-surface' disabled={isLoading} onClick={saveOnboarding}>
+                            <Button type='button' containerClassName='w-full' className='text-rede-surface' disabled={isLoading} onClick={saveOnboarding}>
                                 {isLoading ? 'A processar...' : 'Terminar'}
                             </Button>
                         ) : (
-                            <Button type='button' containerClassName='w-full' className='text-rede-surface' onClick={goToNextMiniStep} disabled={isLoading}>
+                            <Button type='button' containerClassName='w-full' className='text-rede-surface' onClick={goToNextMiniStep} disabled={!canContinue || isLoading}>
                                 Continuar
                             </Button>
                         )}

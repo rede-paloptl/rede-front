@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
+import { ensureTaxonomy } from "@/lib/taxonomy";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -10,21 +12,37 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Rede Cinema",
-  description: "Created By ANIMA",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_NAME,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    locale: "pt_PT",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Listas de opções (Configurações do painel), partilhadas com o browser.
+  const taxonomy = await ensureTaxonomy();
+
   return (
     // 2. Injete a variável na tag html
-    <html lang="en" className={`${poppins.variable} h-full antialiased`}>
+    <html lang="pt" className={`${poppins.variable} h-full antialiased`}>
       {/* 3. Mantenha a classe no body */}
       <body className={`${poppins.className} bg-background text-foreground antialiased`}>
-        <Providers>
+        <Providers taxonomyTerms={taxonomy.terms}>
           {children}
         </Providers>
       </body>
