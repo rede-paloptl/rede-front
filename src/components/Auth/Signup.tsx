@@ -2,7 +2,7 @@
 
 import { customBlur } from '@/app/fonts';
 import type { SignupPayload } from '@/actions/authentication';
-import { User } from '@/types/User';
+import { AccountType, CompanyType, User } from '@/types/User';
 import { Heading } from "../ui/heading"
 import { Text } from '../ui/text';
 import { FormEvent, useRef, useState } from 'react';
@@ -16,6 +16,8 @@ import { ResendConfirmation } from './ResendConfirmation';
 import { GoogleSignInButton } from './GoogleSignInButton';
 import { POST_AUTH_REDIRECT } from './GuestOnly';
 import { TURNSTILE_SITE_KEY, TurnstileHandle, TurnstileWidget } from './TurnstileWidget';
+import { Select } from '../ui/select';
+import { companyTypeOptions } from './data';
 
 const normalizeUsernameBase = (value: string) => {
     return value
@@ -95,6 +97,20 @@ export const Signup: React.FC = () => {
             username: ""
         }
     });
+    // O sub-tipo so existe nas contas de empresa; comeca em "empresa".
+    const updateAccountType = (accountType: AccountType) => {
+        setRegister((lastState) => {
+            const { companyType, ...profileData } = lastState.profileData;
+
+            return {
+                ...lastState,
+                profileData: accountType === 'company'
+                    ? { ...profileData, accountType, companyType: companyType ?? 'empresa' }
+                    : { ...profileData, accountType },
+            };
+        });
+    }
+
     const showError = (text: string) => {
         setRequireConfirmation(false);
         setShowMessaage(true);
@@ -218,7 +234,7 @@ export const Signup: React.FC = () => {
                     </div>
                     <Heading className={`text-rede-white ${customBlur.className} text-[48px] leading-14`}>Verifique o seu email</Heading>
                     <Text className="text-[14px] leading-5 font-medium">
-                        Enviámos um link de confirmação para <span className="text-rede-yellow font-bold break-all">{pendingConfirmationEmail}</span>.
+                        Enviamos um link de confirmação para<br/> <span className="text-rede-yellow font-bold break-all">{pendingConfirmationEmail}</span>.
                         Abra-o para definir a sua palavra-passe e ativar a conta.
                     </Text>
                     <Text className="text-[14px] leading-5 text-rede-white/70">
@@ -267,7 +283,7 @@ export const Signup: React.FC = () => {
                             icon={<UserRound width={14} height={14} />}
                             className={register.profileData.accountType === 'individual' ? 'text-rede-surface' : ''}
                             containerClassName='w-full'
-                            onClick={() => setRegister((lastState) => ({ ...lastState, profileData: { ...lastState.profileData, accountType: 'individual' } }))}
+                            onClick={() => updateAccountType('individual')}
                         >
                             Individual
                         </Button>
@@ -277,11 +293,23 @@ export const Signup: React.FC = () => {
                             icon={<Building2 width={14} height={14} />}
                             className={register.profileData.accountType === 'company' ? 'text-rede-surface' : ''}
                             containerClassName='w-full'
-                            onClick={() => setRegister((lastState) => ({ ...lastState, profileData: { ...lastState.profileData, accountType: 'company' } }))}
+                            onClick={() => updateAccountType('company')}
                         >
                             Empresa
                         </Button>
                     </div>
+
+                    {register.profileData.accountType === 'company' && (
+                        <div className='flex flex-col gap-2'>
+                            <label className='text-[20px] leading-7'>Tipo de entidade</label>
+                            <Select
+                                variant={"secondary"}
+                                options={companyTypeOptions}
+                                value={register.profileData.companyType}
+                                onChange={(value) => setRegister((lastState) => ({ ...lastState, profileData: { ...lastState.profileData, companyType: value as CompanyType } }))}
+                            />
+                        </div>
+                    )}
 
                     <div className='flex flex-col gap-2'>
                         <label className='text-[20px] leading-7' htmlFor='nameField'>Nome</label>

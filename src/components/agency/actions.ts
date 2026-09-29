@@ -1,6 +1,19 @@
 import { SelectItemType } from '../network/filters'
-import { getTaxonomy } from '@/lib/taxonomy'
+import { getTaxonomy, sortByLabel, type TaxonomyKind } from '@/lib/taxonomy'
 import { FilmType } from './Films'
+
+/**
+ * O genero de um filme do catalogo cobre as duas listas: os formatos
+ * (documentario, animacao, ...) sairam dos generos para uma lista propria, e
+ * os filmes que ja os tinham continuam a ser encontrados por eles.
+ */
+export const agencyGenreKinds: TaxonomyKind[] = ['film-genre', 'film-format']
+
+export const getAgencyGenreOptions = (): SelectItemType[] => {
+  const taxonomy = getTaxonomy()
+
+  return [...taxonomy.filmGenres, ...taxonomy.filmFormats].sort(sortByLabel)
+}
 
 export type FilmFilters = {
   search: string
@@ -33,7 +46,7 @@ export function filterFilms(films: FilmType[], filters: FilmFilters): FilmType[]
     // Os filtros usam ids das listas; os filmes guardam o slug.
     const taxonomy = getTaxonomy()
     if (filters.country && taxonomy.id(film.country, ['country']) !== filters.country) return false
-    if (filters.genre && taxonomy.id(film.genre, ['film-genre']) !== filters.genre) return false
+    if (filters.genre && taxonomy.id(film.genre, agencyGenreKinds) !== filters.genre) return false
     if (filters.year && film.year !== filters.year) return false
 
     return true

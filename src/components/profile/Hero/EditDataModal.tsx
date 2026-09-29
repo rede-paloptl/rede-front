@@ -287,6 +287,7 @@ const EditDataForm: React.FC<EditDataModalProps> = ({ profile, profileData, isSa
     <Modal
       open
       onClose={handleClose}
+      closeOnBackdropClick={false}
       wrapperClassName="max-w-3xl"
       panelClassName="rounded-none border-[1.3px] border-rede-white/20 p-6 sm:p-8"
     >

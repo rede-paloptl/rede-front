@@ -3,6 +3,12 @@ import { SocialLinks } from "./Profile";
 export type LoginType = 'normal' | 'google';
 export type AccountType = 'individual' | 'company';
 
+/**
+ * Sub-tipo de uma conta de empresa: o slug do tipo de perfil (taxonomia) com
+ * que aparece na Rede e de onde saem as competências. Ausente = 'empresa'.
+ */
+export type CompanyType = 'empresa' | 'festival' | 'instituicao';
+
 export type ProfileAchievement = {
     id: string;
     type: string;
@@ -52,6 +58,7 @@ export interface User {
         associatedWithCompany?: { status: boolean, companyName: string };
 
         // Collective
+        companyType?: CompanyType;
         commercialName: string;
         creationDate: string;
         isRegistered: boolean;

@@ -7,15 +7,19 @@ import { Input } from "./ui/Input";
 import { Button } from "./ui/button";
 import { Text } from "./ui/text";
 import { InputSelect } from "./ui/input-select";
+import { InputSelectMultiple } from "./ui/input-select-multiple";
 import { ImageCropUploader } from "./ImageCropUploader";
 import { getTaxonomy } from "@/lib/taxonomy";
 import {
-  getCategoriesByAccountType,
+  filmTypeKinds,
+  getFilmFormatOptions,
   getFilmGenreOptions,
   getFilmTagLabel,
   getFilmThemeOptions,
+  getProfileCategories,
+  ProfileTypeSource,
 } from "./network/data";
-import { AccountType } from "@/types/User";
+import { ProfileFilm } from "@/types/User";
 import { Tag } from "./ui/tag";
 import { X } from "lucide-react";
 
@@ -25,8 +29,9 @@ export type FilmFormData = {
   year: string;
   duration: string;
   countries: string[];
-  theme: string;
+  format: string;
   genre: string;
+  themes: string[];
   roles: string[];
   link: string;
   cover: string;
@@ -37,8 +42,9 @@ const EMPTY_FORM: FilmFormData = {
   year: "",
   duration: "",
   countries: [],
-  theme: "",
+  format: "",
   genre: "",
+  themes: [],
   roles: [],
   link: "",
   cover: "",
@@ -48,12 +54,20 @@ const EMPTY_FORM: FilmFormData = {
 // limite vive aqui e e aplicado tanto ao adicionar como ao normalizar.
 const MAX_ROLES = 3;
 
-const requiredFields: Array<Exclude<keyof FilmFormData, "countries" | "roles">> = [
+// Paises fora da lista (a lista so tem os PALOP+TL). Os filmes aceitam valores
+// fora das listas, que ficam gravados e aparecem tal e qual.
+const OTHER_COUNTRY = { label: "Outros", value: "Outros" };
+
+type RequiredField = Extract<keyof FilmFormData, "title" | "year" | "duration" | "format" | "genre">;
+
+// O formato so e exigido quando a lista existe: ate a lista ser criada no
+// painel (yarn migrate:film-format), ninguem ficava impedido de gravar.
+const getRequiredFields = (): RequiredField[] => [
   "title",
   "year",
   "duration",
-  "theme",
   "genre",
+  ...(getFilmFormatOptions().length > 0 ? (["format"] as const) : []),
 ];
 
 const uniqueValues = (values: string[]) =>
@@ -63,10 +77,56 @@ const uniqueValues = (values: string[]) =>
 // da lista pode ser escolhida.
 const searchableSelectProps = {
   variant: "secondary" as const,
-  allowFreeText: false,
   emptyMessage: "Nenhum resultado",
   popoverClassName: "[&>ul]:max-h-[250px]",
 };
+
+/**
+ * `type` de um filme junta formato, genero e temas numa so lista; cada valor
+ * e separado pelo tipo do termo. Um valor fora das listas fica nos temas, onde
+ * continua visivel e pode ser removido.
+ */
+const splitFilmType = (type: string[] = []): Pick<FilmFormData, "format" | "genre" | "themes"> => {
+  const taxonomy = getTaxonomy();
+  const split: Pick<FilmFormData, "format" | "genre" | "themes"> = { format: "", genre: "", themes: [] };
+
+  for (const value of type) {
+    const term = taxonomy.find(value, filmTypeKinds);
+
+    if (term?.kind === "film-format") split.format ||= term.id;
+    else if (term?.kind === "film-genre") split.genre ||= term.id;
+    else split.themes.push(term?.id ?? value);
+  }
+
+  return split;
+};
+
+/** Os dados de um filme gravado, prontos para o formulario. */
+export const toFilmFormData = (film: ProfileFilm): FilmFormData => ({
+  id: film.id,
+  title: film.title,
+  year: String(film.year),
+  duration: film.duration ?? "",
+  countries: film.countries ?? [],
+  ...splitFilmType(film.type),
+  link: film.link ?? "",
+  roles: film.roles ?? [],
+  cover: film.cover,
+});
+
+/** O filme a gravar no perfil a partir do formulario (ja validado). */
+export const toProfileFilm = (form: FilmFormData, current?: ProfileFilm): ProfileFilm => ({
+  id: form.id ?? crypto.randomUUID(),
+  title: form.title.trim(),
+  director: current?.director ?? "",
+  type: uniqueValues([form.format, form.genre, ...form.themes]),
+  year: Number(form.year) || new Date().getFullYear(),
+  countries: form.countries,
+  cover: form.cover,
+  duration: form.duration,
+  link: form.link,
+  roles: form.roles.length ? form.roles : undefined,
+});
 
 const toFormIds = (form: FilmFormData): FilmFormData => {
   const taxonomy = getTaxonomy();
@@ -74,8 +134,9 @@ const toFormIds = (form: FilmFormData): FilmFormData => {
   return {
     ...form,
     countries: form.countries.map((country) => taxonomy.id(country, ["country"])),
-    theme: form.theme ? taxonomy.id(form.theme, ["film-theme"]) : "",
+    format: form.format ? taxonomy.id(form.format, ["film-format"]) : "",
     genre: form.genre ? taxonomy.id(form.genre, ["film-genre"]) : "",
+    themes: form.themes.map((theme) => taxonomy.id(theme, ["film-theme"])),
     roles: form.roles.map((role) => taxonomy.id(role, ["profile-category", "profile-subcategory"])),
   };
 };
@@ -86,11 +147,48 @@ const normalizeFormData = (form: FilmFormData): FilmFormData => ({
   year: form.year.trim(),
   duration: form.duration.trim(),
   countries: uniqueValues(form.countries),
-  theme: form.theme.trim(),
+  format: form.format.trim(),
   genre: form.genre.trim(),
+  themes: uniqueValues(form.themes),
   roles: uniqueValues(form.roles).slice(0, MAX_ROLES),
   link: form.link.trim() ? ensureHttps(form.link) : "",
 });
+
+type SelectedTagsProps = {
+  values: string[];
+  onRemove: (value: string) => void;
+};
+
+const SelectedTags: React.FC<SelectedTagsProps> = ({ values, onRemove }) =>
+  values.length > 0 ? (
+    <div className="flex flex-wrap gap-2.5">
+      {values.map((value) => (
+        <Tag key={value} className="flex gap-1 items-center">
+          {getFilmTagLabel(value)}
+          <button
+            type="button"
+            aria-label={`Remover ${getFilmTagLabel(value)}`}
+            onClick={() => onRemove(value)}
+            className="inline-flex cursor-pointer"
+          >
+            <X width={12} height={12} color="#ffffff" />
+          </button>
+        </Tag>
+      ))}
+    </div>
+  ) : null;
+
+type FieldLabelProps = {
+  children: React.ReactNode;
+  hint?: string;
+};
+
+const FieldLabel: React.FC<FieldLabelProps> = ({ children, hint }) => (
+  <div className="flex items-baseline gap-1.5">
+    <Text className="text-[16px] font-medium">{children}</Text>
+    {hint && <span className="text-xs text-rede-white/40">{hint}</span>}
+  </div>
+);
 
 type FilmFormModalProps = {
   open: boolean;
@@ -98,7 +196,8 @@ type FilmFormModalProps = {
   onSubmit: (data: FilmFormData) => void | Promise<void>;
   initialData?: Partial<FilmFormData>;
   defaultCover?: string;
-  accountType?: AccountType;
+  /** Tipo do perfil: as funcoes saem das categorias desse tipo. */
+  profile?: ProfileTypeSource;
 };
 
 export const AddFilmModal: React.FC<FilmFormModalProps> = ({
@@ -107,67 +206,24 @@ export const AddFilmModal: React.FC<FilmFormModalProps> = ({
   onSubmit,
   initialData,
   defaultCover,
-  accountType,
+  profile,
 }) => {
   // Filmes antigos podem ter slugs em vez de ids: o formulario usa sempre ids.
   const [form, setForm] = useState<FilmFormData>(() => toFormIds({ ...EMPTY_FORM, ...initialData }));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
-  // Os campos de "adicionar a lista" limpam o texto pesquisado depois de cada escolha.
-  const [countryPickerKey, setCountryPickerKey] = useState(0);
-  const [rolePickerKey, setRolePickerKey] = useState(0);
 
-  const availableCountryOptions = useMemo(
-    () => getTaxonomy().countriesList.filter((option) => !form.countries.includes(option.value)),
-    [form.countries],
-  );
+  const countryOptions = useMemo(() => [...getTaxonomy().countriesList, OTHER_COUNTRY], []);
 
-  const addCountry = (country: string) => {
-    if (country) {
-      setForm((prev) =>
-        prev.countries.includes(country) ? prev : { ...prev, countries: [...prev.countries, country] },
-      );
-    }
-
-    setCountryPickerKey((key) => key + 1);
-  };
-
-  const removeCountry = (country: string) =>
-    setForm((prev) => ({
-      ...prev,
-      countries: prev.countries.filter((item) => item !== country),
-    }));
-
-  // A funcao segue as mesmas categorias das competencias: empresa usa as
-  // categorias de empresa, individual as de profissionais. Uma pessoa pode
-  // desempenhar varias funcoes no mesmo filme, por isso a lista ja escolhida
-  // sai das opcoes disponiveis.
-  const roleOptions = getCategoriesByAccountType(accountType);
-  const availableRoleOptions = useMemo(
-    () => roleOptions.filter((option) => !form.roles.includes(option.value)),
-    [roleOptions, form.roles],
-  );
-
-  const addRole = (role: string) => {
-    if (role) {
-      setForm((prev) =>
-        prev.roles.includes(role) || prev.roles.length >= MAX_ROLES
-          ? prev
-          : { ...prev, roles: [...prev.roles, role] },
-      );
-    }
-
-    setRolePickerKey((key) => key + 1);
-  };
-
-  const removeRole = (role: string) =>
-    setForm((prev) => ({
-      ...prev,
-      roles: prev.roles.filter((item) => item !== role),
-    }));
+  // A funcao segue as mesmas categorias das competencias do perfil. Uma pessoa
+  // pode desempenhar varias funcoes no mesmo filme.
+  const roleOptions = getProfileCategories(profile);
 
   const update = <K extends keyof FilmFormData>(key: K, value: FilmFormData[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
+
+  const removeFrom = (key: "countries" | "themes" | "roles", value: string) =>
+    setForm((prev) => ({ ...prev, [key]: prev[key].filter((item) => item !== value) }));
 
   const handleSubmit = async () => {
     setError("");
@@ -176,7 +232,11 @@ export const AddFilmModal: React.FC<FilmFormModalProps> = ({
       cover: form.cover || defaultCover || "",
     });
 
-    if (requiredFields.some((field) => !payload[field]) || payload.countries.length === 0) {
+    if (
+      getRequiredFields().some((field) => !payload[field]) ||
+      payload.countries.length === 0 ||
+      payload.themes.length === 0
+    ) {
       setError("Preencha todos os campos obrigatórios do filme.");
       return;
     }
@@ -198,7 +258,12 @@ export const AddFilmModal: React.FC<FilmFormModalProps> = ({
   };
 
   return (
-    <Modal open={open} onClose={onClose} panelClassName="w-full max-w-[680px] rounded-none border-[1.3px] border-white/90">
+    <Modal
+      open={open}
+      onClose={onClose}
+      closeOnBackdropClick={false}
+      panelClassName="w-full max-w-[680px] rounded-none border-[1.3px] border-white/90"
+    >
       <div className="flex flex-col gap-6">
         <ImageCropUploader
           height={250}
@@ -214,7 +279,7 @@ export const AddFilmModal: React.FC<FilmFormModalProps> = ({
 
         <div className="w-full flex gap-3">
           <div className="w-1/2 flex flex-col gap-2">
-            <Text className="text-[16px] font-medium">Título</Text>
+            <FieldLabel>Título</FieldLabel>
             <Input
               variant="secondary"
               placeholder="Ex: Terra Vermelha"
@@ -225,7 +290,7 @@ export const AddFilmModal: React.FC<FilmFormModalProps> = ({
 
           <div className="w-1/2 flex gap-2">
             <div className="flex flex-col gap-2">
-              <Text className="text-[16px] font-medium">Ano</Text>
+              <FieldLabel>Ano</FieldLabel>
               <Input
                 variant="secondary"
                 placeholder="2026"
@@ -234,7 +299,7 @@ export const AddFilmModal: React.FC<FilmFormModalProps> = ({
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Text className="text-[16px] font-medium">Duração</Text>
+              <FieldLabel>Duração</FieldLabel>
               <Input
                 variant="secondary"
                 placeholder="14 min"
@@ -246,51 +311,46 @@ export const AddFilmModal: React.FC<FilmFormModalProps> = ({
         </div>
 
         <div className="flex flex-col gap-2">
-          <Text className="text-[16px] font-medium">Países</Text>
-
-          {form.countries.length > 0 && (
-            <div className="flex flex-wrap gap-2.5">
-              {form.countries.map((country) => (
-                <Tag key={country} className="flex gap-1 items-center">
-                  {getFilmTagLabel(country)}
-                  <X
-                    width={12}
-                    height={12}
-                    color="#ffffff"
-                    className="cursor-pointer"
-                    aria-label={`Remover ${getFilmTagLabel(country)}`}
-                    onClick={() => removeCountry(country)}
-                  />
-                </Tag>
-              ))}
-            </div>
-          )}
-
-          <InputSelect
-            key={countryPickerKey}
+          <FieldLabel>Países</FieldLabel>
+          <SelectedTags values={form.countries} onRemove={(country) => removeFrom("countries", country)} />
+          <InputSelectMultiple
             {...searchableSelectProps}
-            placeholder={form.countries.length > 0 ? "Adicionar outro país" : "Pesquisar e adicionar país"}
-            options={availableCountryOptions}
-            value=""
-            onChange={addCountry}
+            placeholder="Pesquisar e adicionar país"
+            options={countryOptions}
+            value={form.countries}
+            onChange={(countries) => update("countries", countries)}
           />
         </div>
 
-        <div className="flex justify-between gap-2">
-          <div className="w-full flex flex-col gap-2">
-            <Text className="text-[16px] font-medium">Tema</Text>
+        <div className="flex flex-col gap-2">
+          <FieldLabel>Tema</FieldLabel>
+          <SelectedTags values={form.themes} onRemove={(theme) => removeFrom("themes", theme)} />
+          <InputSelectMultiple
+            {...searchableSelectProps}
+            placeholder="Pesquisar e adicionar tema"
+            options={getFilmThemeOptions()}
+            value={form.themes}
+            onChange={(themes) => update("themes", themes)}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-2">
+          <div className="flex flex-col gap-2">
+            <FieldLabel>Formato</FieldLabel>
             <InputSelect
               {...searchableSelectProps}
-              placeholder="Pesquisar tema"
-              options={getFilmThemeOptions()}
-              value={form.theme}
-              onChange={(value) => update("theme", value)}
+              allowFreeText={false}
+              placeholder="Pesquisar formato"
+              options={getFilmFormatOptions()}
+              value={form.format}
+              onChange={(value) => update("format", value)}
             />
           </div>
-          <div className="w-full flex flex-col gap-2">
-            <Text className="text-[16px] font-medium">Gênero</Text>
+          <div className="flex flex-col gap-2">
+            <FieldLabel>Gênero</FieldLabel>
             <InputSelect
               {...searchableSelectProps}
+              allowFreeText={false}
               placeholder="Pesquisar gênero"
               options={getFilmGenreOptions()}
               value={form.genre}
@@ -299,48 +359,21 @@ export const AddFilmModal: React.FC<FilmFormModalProps> = ({
           </div>
         </div>
 
-
         <div className="flex flex-col gap-2">
-          <div className="flex items-baseline gap-1.5">
-            <Text className="text-[16px] font-medium">Função</Text>
-            <span className="text-xs text-rede-white/40">(até {MAX_ROLES})</span>
-          </div>
-
-          {form.roles.length > 0 && (
-            <div className="flex flex-wrap gap-2.5">
-              {form.roles.map((role) => (
-                <Tag key={role} className="flex gap-1 items-center">
-                  {getFilmTagLabel(role)}
-                  <X
-                    width={12}
-                    height={12}
-                    color="#ffffff"
-                    className="cursor-pointer"
-                    onClick={() => removeRole(role)}
-                  />
-                </Tag>
-              ))}
-            </div>
-          )}
-
-
-          <InputSelect
-            key={rolePickerKey}
+          <FieldLabel hint={`(até ${MAX_ROLES})`}>Função</FieldLabel>
+          <SelectedTags values={form.roles} onRemove={(role) => removeFrom("roles", role)} />
+          <InputSelectMultiple
             {...searchableSelectProps}
-            placeholder={form.roles.length >= MAX_ROLES ? "Limite de funções atingido" : "Pesquisar e adicionar função"}
-            value=""
-            options={availableRoleOptions}
-            disabled={form.roles.length >= MAX_ROLES}
-            onChange={addRole}
+            placeholder="Pesquisar e adicionar função"
+            options={roleOptions}
+            value={form.roles}
+            max={MAX_ROLES}
+            onChange={(roles) => update("roles", roles)}
           />
         </div>
 
-
         <div className="flex flex-col gap-2">
-          <div className="flex items-baseline gap-1.5">
-            <Text className="text-[16px] font-medium">Link do filme</Text>
-            <span className="text-xs text-rede-white/40">(opcional)</span>
-          </div>
+          <FieldLabel hint="(opcional)">Link do filme</FieldLabel>
           <Input
             variant="secondary"
             placeholder="Link..."

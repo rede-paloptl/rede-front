@@ -2,7 +2,7 @@ import { NetworkUser } from '@/actions/users'
 import { getTaxonomy, type TaxonomyKind } from '@/lib/taxonomy'
 
 import { ProfileType } from '../ProfileCard'
-import { getProfileTypeByAccountType } from './data'
+import { getProfileTypeId } from './data'
 import { normalizeCountryValue, normalizeLabelKey } from './filters'
 
 const fallbackProfileImage = '/assets/profile/profile.png'
@@ -101,9 +101,8 @@ export const toProfileCardData = (user: NetworkUser, index: number): ProfileType
   // O perfil so guarda pais e cidade; a provincia e a da cidade.
   const province = taxonomy.ancestorOfKind(taxonomy.byId.get(city), 'region')?.id ?? ''
 
-  // A API so tem contas individuais e de empresa. Festival e instituicao
-  // existem na taxonomia dos filtros mas ainda nao como tipo de conta.
-  const type = getProfileTypeByAccountType(profileData?.accountType)
+  // Individual, ou o sub-tipo da conta de empresa (empresa, festival, instituicao).
+  const type = getProfileTypeId(profileData)
 
   const subCategories = buildSubCategories(user)
   const categories = buildCategories(user, subCategories)

@@ -3,8 +3,8 @@ import { Tag } from "@/components/ui/tag";
 import { Heading } from "@/components/ui/heading";
 import { Select, SelectOption } from "@/components/ui/select";
 import {
-    getCategoriesByAccountType,
-    getSubCategoriesByAccountType,
+    getProfileCategories,
+    getProfileSubCategories,
 } from "@/components/network/data";
 import { User } from "@/types/User";
 import { getTaxonomy, type TaxonomyKind } from "@/lib/taxonomy";
@@ -21,20 +21,21 @@ export const toSkillId = (value: string) => getTaxonomy().id(value, skillKinds);
 export const toSkillLabel = (value: string) => getTaxonomy().label(value, skillKinds);
 
 // As competencias principais (coreSkills) sao a Categoria do perfil, e saem
-// da lista de categorias do tipo de conta.
+// da lista de categorias do seu tipo (profissionais, empresa, festival ou
+// instituicao).
 export const getCoreSkillOptions = (profileData?: ProfileData): SelectOption[] =>
-    getCategoriesByAccountType(profileData?.accountType);
+    getProfileCategories(profileData);
 
 // Esta seccao guarda profileData.skills, que e a Sub-categoria com que a
 // pesquisa da rede compara. Um perfil de empresa escolhe entre as
 // sub-categorias do seu tipo; profissionais nao tem nivel abaixo da
 // profissao, por isso continuam a escolher entre as proprias categorias.
 export const getSkillOptions = (profileData?: ProfileData): SelectOption[] => {
-    const subCategories = getSubCategoriesByAccountType(profileData?.accountType);
+    const subCategories = getProfileSubCategories(profileData);
 
     return subCategories.length > 0
         ? subCategories
-        : getCategoriesByAccountType(profileData?.accountType);
+        : getProfileCategories(profileData);
 };
 
 type SectionEditSkillsProps = {

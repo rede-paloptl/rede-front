@@ -31,6 +31,7 @@ export type TaxonomyKind =
   | 'content-category'
   | 'content-theme'
   | 'opportunity-type'
+  | 'film-format'
   | 'film-genre'
   | 'film-theme'
 
@@ -204,6 +205,7 @@ function buildTaxonomy(terms: TaxonomyTerm[], version: number) {
     contentThemes: ofKind('content-theme'),
     opportunityTypes: ofKind('opportunity-type'),
 
+    filmFormats: ofKind('film-format'),
     filmGenres: ofKind('film-genre'),
     filmThemes: ofKind('film-theme'),
   }

@@ -206,7 +206,7 @@ export const ShowProfile: React.FC<ShowProfileType> = ({
         onSave={handleSaveData}
       />
 
-      <Modal open={isAvatarCropOpen} onClose={() => setIsAvatarCropOpen(false)} panelClassName="flex justify-center rounded-none border-[1.3px] border-rede-white/20">
+      <Modal open={isAvatarCropOpen} onClose={() => setIsAvatarCropOpen(false)} closeOnBackdropClick={false} panelClassName="flex justify-center rounded-none border-[1.3px] border-rede-white/20">
         <ImageCropUploader
           className="w-[350px]"
           height={350}

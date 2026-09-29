@@ -329,6 +329,7 @@ export const EditProfile: React.FC<EditProfileType> = ({
       <Modal
         open={isContactsOpen}
         onClose={() => !isSaving && setIsContactsOpen(false)}
+        closeOnBackdropClick={false}
         panelClassName="rounded-none border-[1.3px] border-rede-white/20 p-6 sm:p-8"
       >
         <Heading className={`${customBlur.className} text-[32px] leading-9 font-medium`}>

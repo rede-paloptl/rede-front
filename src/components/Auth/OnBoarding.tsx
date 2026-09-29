@@ -263,7 +263,7 @@ export const OnBoarding: React.FC = () => {
         }
 
         if (response.error) {
-            setMessage(response.message || "Nao foi possivel atualizar os dados.");
+            setMessage(response.message || "Não foi possivel atualizar os dados.");
             setLoading(false);
             return;
         }
@@ -274,7 +274,7 @@ export const OnBoarding: React.FC = () => {
             return;
         }
 
-        setMessage(response.message || "Nao foi possivel atualizar os dados.");
+        setMessage(response.message || "Não foi possivel atualizar os dados.");
         setLoading(false);
     }
     const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -320,12 +320,9 @@ export const OnBoarding: React.FC = () => {
                 </div>
             );
         }
+        // O nome da conta ja foi dado no passo 1 do registo.
         return (
             <div className='grid grid-cols-1 gap-4'>
-                <div className={fieldGroupClassName}>
-                    <label className={labelClassName} htmlFor='nameField'>Nome</label>
-                    <Input variant={"secondary"} placeholder='Nome da conta' id='nameField' value={register.name} onChange={(event) => setRegister((lastState) => ({ ...lastState, name: event.target.value }))} />
-                </div>
                 <div className={fieldGroupClassName}>
                     <label className={labelClassName} htmlFor='commercialNameField'>Nome comercial</label>
                     <Input variant={"secondary"} placeholder='Nome comercial' id='commercialNameField' value={register.profileData.commercialName} onChange={(event) => updateProfileData("commercialName", event.target.value)} />
@@ -335,7 +332,7 @@ export const OnBoarding: React.FC = () => {
                     <Input variant={"secondary"} type='date' id='creationDateField' value={register.profileData.creationDate} onChange={(event) => updateProfileData("creationDate", event.target.value)} />
                 </div>
                 <div className={fieldGroupClassName}>
-                    <label className={labelClassName}>A entidade esta registada?</label>
+                    <label className={labelClassName}>A entidade está registada?</label>
                     <Select variant={"secondary"} options={[{ label: 'Sim', value: 'yes' }, { label: 'Não', value: 'no' }]} value={register.profileData.isRegistered ? "yes" : "no"} onChange={(value) => updateProfileData("isRegistered", value === "yes")} />
                 </div>
             </div>
@@ -365,8 +362,8 @@ export const OnBoarding: React.FC = () => {
     );
     const renderAssociationStep = () => (
         <div className={fieldGroupClassName}>
-            <label className={labelClassName}>Esta associado a alguma empresa ou colectivo?</label>
-            <Select variant={"secondary"} options={[{ label: 'Nao', value: 'no' }, { label: 'Sim', value: 'yes' }]} value={register.profileData.associatedWithCompany?.status ? "yes" : "no"} onChange={(value) => {
+            <label className={labelClassName}>Está associado a alguma empresa ou colectivo?</label>
+            <Select variant={"secondary"} options={[{ label: 'Não', value: 'no' }, { label: 'Sim', value: 'yes' }]} value={register.profileData.associatedWithCompany?.status ? "yes" : "no"} onChange={(value) => {
                 setRegister((lastState) => {
                     return (value === "yes")
                         ? { ...lastState, profileData: { ...lastState.profileData, associatedWithCompany: { status: true, companyName: "" } } }
@@ -387,12 +384,12 @@ export const OnBoarding: React.FC = () => {
                 <SelectMultiple variant={"secondary"} options={serviceOptions} value={selectedServices} onChange={handleServicesChange} placeholder='Selecione todos os servicos' />
             </div>
             <div className={fieldGroupClassName}>
-                <label className={labelClassName} htmlFor='otherServiceField'>Acrescentar servico nao descrito</label>
+                <label className={labelClassName} htmlFor='otherServiceField'>Acrescentar servico não descrito</label>
                 <Input variant={"secondary"} placeholder='Outro servico' id='otherServiceField' value={register.profileData.otherService} onChange={(event) => updateProfileData("otherService", event.target.value)} />
             </div>
             <div className={fieldGroupClassName}>
                 <label className={labelClassName}>A empresa/organizacao fornece aluguer de equipamentos?</label>
-                <Select variant={"secondary"} options={[{ label: 'Nao', value: 'no' }, { label: 'Sim', value: 'yes' }]} value={register.profileData.rentsEquipment?.status ? "yes" : "none"} onChange={(value) => {
+                <Select variant={"secondary"} options={[{ label: 'Não', value: 'no' }, { label: 'Sim', value: 'yes' }]} value={register.profileData.rentsEquipment?.status ? "yes" : "none"} onChange={(value) => {
                     setRegister((lastState) => {
                         return (value === "yes")
                             ? { ...lastState, profileData: { ...lastState.profileData, rentsEquipment: { status: true, equipmentName: "" } } }

@@ -8,7 +8,7 @@ import { Input } from '../ui/Input'
 import { Select, withClearOption } from '../ui/select'
 import type { SelectItemType } from '../network/filters'
 import { getTaxonomy } from '@/lib/taxonomy'
-import { FilmFilters } from './actions'
+import { FilmFilters, getAgencyGenreOptions } from './actions'
 
 type FilterSidebarProps = {
   filters: FilmFilters
@@ -152,7 +152,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
               value={selectedGenre}
               placeholder="Selecione o género"
               options={withClearOption(
-                getTaxonomy().filmGenres,
+                getAgencyGenreOptions(),
                 selectedGenre,
                 'Todos os géneros',
               )}

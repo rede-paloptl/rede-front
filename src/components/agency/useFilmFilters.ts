@@ -6,6 +6,7 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import { normalizeCountryValue, normalizeLabelKey } from '../network/filters'
 import { getTaxonomy } from '@/lib/taxonomy'
 import {
+  agencyGenreKinds,
   defaultFilmFilters,
   FilmFilters,
   getFilmYearOptions,
@@ -35,7 +36,7 @@ const findCountryByValue = (value: string) => {
 }
 
 const findGenreByValue = (value: string) => {
-  const genre = getTaxonomy().find(value, ['film-genre'])
+  const genre = getTaxonomy().find(value, agencyGenreKinds)
 
   return genre?.isActive ? { label: genre.label, value: genre.id } : undefined
 }
