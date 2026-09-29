@@ -7,7 +7,7 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: "/",
       // Paginas privadas ou de fluxo de conta: nao tem valor nos resultados.
-      disallow: ["/api/", "/profile", "/historico", "/onboarding", "/confirm-account", "/login", "/signup"],
+      disallow: ["/api/", "/profile", "/historico", "/onboarding", "/confirm-account", "/reset-password", "/login", "/signup"],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,
     host: SITE_URL,

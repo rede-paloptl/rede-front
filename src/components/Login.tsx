@@ -211,7 +211,7 @@ export const Login: React.FC = () => {
                             </div>
                         </div>
 
-                        <Link href="/reset-pawword" className='flex justify-end mt-4.5'>
+                        <Link href="/reset-password" className='flex justify-end mt-4.5'>
                             <Text className='text-[14px] leading-5 font-bold'>Esqueci a senha</Text>
                         </Link>
 

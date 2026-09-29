@@ -3,6 +3,7 @@
 import { api } from '@/lib/api'
 import { LoggedUser, User } from '@/types/User'
 import { headers } from 'next/headers'
+import { isAxiosError } from 'axios'
 
 export type ConfirmationBaseUrlPayload = {
   confirmationBaseUrl?: string;
@@ -215,5 +216,47 @@ export const loginUsingGoogle = async ({ idToken }: GoogleLoginPayload): Promise
       error: err.response?.data?.error || "Erro desconhecido",
       message: err.response?.data?.message || "Não foi possível iniciar sessão com o Google"
     }
+  }
+}
+
+export type PasswordResetResponseType = {
+  message?: string;
+  error?: string;
+}
+
+const toPasswordResetError = (err: unknown, fallbackMessage: string): PasswordResetResponseType => {
+  const data = isAxiosError(err) ? err.response?.data : undefined;
+
+  return {
+    error: data?.error || "Erro desconhecido",
+    message: data?.message || fallbackMessage,
+  }
+}
+
+/** Pede o email com o link para definir uma nova palavra-passe. */
+export const requestPasswordReset = async (email: string, turnstileToken?: string): Promise<PasswordResetResponseType> => {
+  try {
+    const responseData = await api.post<PasswordResetResponseType>("/api/v1/auth/request-password-reset", {
+      email,
+      resetBaseUrl: await getRequestBaseUrl(),
+      turnstileToken: turnstileToken || undefined,
+    }, {
+      headers: await getClientForwardHeaders(),
+    });
+
+    return { message: responseData.data?.message }
+  } catch (err: unknown) {
+    return toPasswordResetError(err, "Não foi possível enviar o pedido. Tente novamente.")
+  }
+}
+
+/** Define a nova palavra-passe com o token do link do email. */
+export const resetPassword = async (token: string, password: string): Promise<PasswordResetResponseType> => {
+  try {
+    const responseData = await api.post<PasswordResetResponseType>("/api/v1/auth/reset-password", { token, password });
+
+    return { message: responseData.data?.message }
+  } catch (err: unknown) {
+    return toPasswordResetError(err, "Não foi possível atualizar a palavra-passe.")
   }
 }

@@ -22,6 +22,7 @@ export const reservedRoutes = new Set([
   "opportunities",
   "opportunity-details",
   "profile",
+  "reset-password",
   "signup",
 ]);
 
