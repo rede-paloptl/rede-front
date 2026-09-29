@@ -26,7 +26,9 @@ const InformationBox: React.FC = () => {
 export default function SignupPage() {
     return (
         <GuestOnly>
-            <div className="w-full min-h-screen bg-[url('/assets/signup/signup.png')] bg-cover bg-center flex justify-center items-start md:items-center overflow-y-auto py-10 pt-28 pb-10">
+            {/* O scroll fica neste contentor, com o espaço da barra reservado dos dois lados:
+                ao trocar o tipo de perfil o form cresce, mas não salta nem sai do centro. */}
+            <div className="w-full h-dvh bg-[url('/assets/signup/signup.png')] bg-cover bg-center flex justify-center items-start overflow-y-auto [scrollbar-gutter:stable_both-edges] pt-28 pb-10">
                 <Signup />
                 {/* <InformationBox /> */}
             </div >
