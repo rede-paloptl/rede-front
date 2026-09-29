@@ -70,8 +70,6 @@ export const Signup: React.FC = () => {
     const turnstileRef = useRef<TurnstileHandle>(null);
     const needsTurnstile = Boolean(TURNSTILE_SITE_KEY) && !googleProfile;
 
-    const canAdvance = acceptedTerms && (!needsTurnstile || turnstileToken.length > 0);
-
     const [register, setRegister] = useState<User>({
         name: "",
         email: "",
@@ -97,6 +95,10 @@ export const Signup: React.FC = () => {
             username: ""
         }
     });
+    // Nome com pelo menos 2 caracteres e email valido, como exige a API.
+    const hasRequiredFields = register.name.trim().length >= 2 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(register.email.trim());
+    const canAdvance = hasRequiredFields && acceptedTerms && (!needsTurnstile || turnstileToken.length > 0);
+
     // O sub-tipo so existe nas contas de empresa; comeca em "empresa".
     const updateAccountType = (accountType: AccountType) => {
         setRegister((lastState) => {
@@ -234,8 +236,9 @@ export const Signup: React.FC = () => {
                     </div>
                     <Heading className={`text-rede-white ${customBlur.className} text-[48px] leading-14`}>Verifique o seu email</Heading>
                     <Text className="text-[14px] leading-5 font-medium">
-                        Enviamos um link de confirmação para<br/> <span className="text-rede-yellow font-bold break-all">{pendingConfirmationEmail}</span>.
-                        Abra-o para definir a sua palavra-passe e ativar a conta.
+                        Enviamos um link de confirmação para
+                        <br/> <span className="text-rede-yellow font-bold break-all">{pendingConfirmationEmail}</span>.
+                        <br/>Abra-o para definir a sua palavra-passe e ativar a conta.
                     </Text>
                     <Text className="text-[14px] leading-5 text-rede-white/70">
                         O link expira em 24 horas. Se não o encontrar, verifique a pasta de spam.
@@ -353,9 +356,9 @@ export const Signup: React.FC = () => {
                         />
                         <Text id='termsAgreementText' as='div' className='text-[14px] leading-5 font-medium'>
                             <label htmlFor='acceptedTermsField' className='cursor-pointer'>Aceito</label>&nbsp;
-                            <Link href="/assets/termos-de-utilização.pdf" target='_blank' className='text-rede-yellow'>Termos de Uso</Link>
+                            <Link href="/assets/termos-de-utilizacao.pdf" target='_blank' className='text-rede-yellow'>Termos de Uso</Link>
                             &nbsp;e&nbsp;
-                            <Link href="/assets/política-de-privacidade.pdf" target='_blank' className='text-rede-yellow'>Política de Privacidade</Link>
+                            <Link href="/assets/politica-de-privacidade.pdf" target='_blank' className='text-rede-yellow'>Política de Privacidade</Link>
                         </Text>
                     </div>
 

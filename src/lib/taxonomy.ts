@@ -214,6 +214,26 @@ function buildTaxonomy(terms: TaxonomyTerm[], version: number) {
 export type Taxonomy = ReturnType<typeof buildTaxonomy>
 
 // ---------------------------------------------------------------------------
+// País e cidade do perfil
+// ---------------------------------------------------------------------------
+
+// Quem não é de nenhum país (ou cidade) das listas escolhe "Outro" ("Outra").
+// A API grava-os tal e qual (rede-back: taxonomy.references.ts) e `label`
+// mostra-os como estão.
+export const OTHER_COUNTRY: SelectItemType = { label: 'Outro', value: 'Outro' }
+export const OTHER_CITY: SelectItemType = { label: 'Outra', value: 'Outra' }
+
+/** Países que um perfil pode escolher: os da lista e, no fim, "Outro". */
+export const getProfileCountryOptions = (): SelectItemType[] => [...getTaxonomy().countriesList, OTHER_COUNTRY]
+
+/** Cidades de um país (em qualquer província) e, no fim, "Outra". Sem país, nenhuma. */
+export const getProfileCityOptions = (country: string | null | undefined): SelectItemType[] =>
+  country ? [...getTaxonomy().optionsWithin('city', country), OTHER_CITY] : []
+
+export const isProfileCountry = (value: string | null | undefined) =>
+  Boolean(value) && getProfileCountryOptions().some((country) => country.value === value)
+
+// ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
 

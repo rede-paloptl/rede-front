@@ -60,8 +60,8 @@ const OTHER_COUNTRY = { label: "Outros", value: "Outros" };
 
 type RequiredField = Extract<keyof FilmFormData, "title" | "year" | "duration" | "format" | "genre">;
 
-// O formato so e exigido quando a lista existe: ate a lista ser criada no
-// painel (yarn migrate:film-format), ninguem ficava impedido de gravar.
+// O formato so e exigido quando a lista existe: ate a API criar a lista
+// (migracao no arranque), ninguem fica impedido de gravar.
 const getRequiredFields = (): RequiredField[] => [
   "title",
   "year",

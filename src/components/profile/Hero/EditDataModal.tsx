@@ -6,7 +6,7 @@ import { User } from "@/types/User"
 import { SocialNetwork } from "@/types/Profile"
 import { customBlur } from "@/app/fonts"
 import { socialFields } from "@/components/Auth/data"
-import { getTaxonomy } from "@/lib/taxonomy"
+import { getProfileCityOptions, getProfileCountryOptions, getTaxonomy, isProfileCountry } from "@/lib/taxonomy"
 import { getCoreSkillOptions, getSkillOptions, toSkillId, toSkillLabel } from "../Bio/SectionEditSkills"
 import { Button } from "@/components/ui/button"
 import { Heading } from "@/components/ui/heading"
@@ -144,7 +144,7 @@ const validate = (values: FormValues, isIndividual: boolean): FormErrors => {
   const errors: FormErrors = {};
 
   if (values.name.trim().length < 2) errors.name = "O nome deve ter pelo menos 2 caracteres.";
-  if (!getTaxonomy().countriesList.some((country) => country.value === values.country)) {
+  if (!isProfileCountry(values.country)) {
     errors.country = "Selecione um país válido.";
   }
 
@@ -196,13 +196,13 @@ const EditDataForm: React.FC<EditDataModalProps> = ({ profile, profileData, isSa
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitError, setSubmitError] = useState("");
 
-  const countryOptions = getTaxonomy().countriesList;
+  const countryOptions = getProfileCountryOptions();
   const serviceOptions = getTaxonomy().services;
 
   // Todas as cidades do pais, em qualquer provincia. Uma cidade gravada que
   // entretanto saiu da lista continua visivel, para nao se perder.
   const cityOptions = useMemo(() => {
-    const options = getTaxonomy().optionsWithin("city", values.country);
+    const options = getProfileCityOptions(values.country);
 
     return values.city && !options.some((option) => option.value === values.city)
       ? [{ label: getTaxonomy().label(values.city, ["city"]), value: values.city }, ...options]

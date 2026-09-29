@@ -36,11 +36,11 @@ const contactItems = [
   },
   {
     label: "Termos de utilização",
-    href: "/assets/termos-de-utilização.pdf",
+    href: "/assets/termos-de-utilizacao.pdf",
   },
   {
     label: "Política de privacidade",
-    href: "/assets/política-de-privacidade.pdf",
+    href: "/assets/politica-de-privacidade.pdf",
   },
 ] as const;
 

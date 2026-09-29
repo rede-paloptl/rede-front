@@ -6,7 +6,7 @@ import { FormEvent, useMemo, useState } from "react";
 import Link from "next/link";
 import { Select } from "../ui/select";
 import { socialFields } from "./data";
-import { getTaxonomy } from "@/lib/taxonomy";
+import { getProfileCityOptions, getProfileCountryOptions, getTaxonomy, isProfileCountry } from "@/lib/taxonomy";
 import { SelectMultiple } from "../ui/select-multiple";
 import { SocialNetwork } from "@/types/Profile";
 import { User } from "@/types/User";
@@ -61,7 +61,6 @@ const formatDateField = (value?: string | Date) => {
 };
 // País, cidade e serviços usam os ids das listas geridas no painel
 // (Configurações). Um registo antigo pode ter o nome: converte-se ao abrir.
-const isKnownCountry = (value: string) => getTaxonomy().countriesList.some((country) => country.value === value);
 const isValidUrl = (value: string) => {
     try {
         new URL(value);
@@ -163,6 +162,33 @@ const getMiniSteps = (
         },
     ];
 };
+const hasText = (value?: string) => Boolean(value?.trim());
+const isValidEmail = (value?: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value?.trim() ?? "");
+
+// Cada mini-step so deixa avancar com os seus campos preenchidos; as redes
+// sociais sao opcionais. Campos que so aparecem com "Sim" so contam nesse caso.
+const isMiniStepComplete = (key: MiniStepKey, register: User): boolean => {
+    const profileData = register.profileData;
+
+    switch (key) {
+        case "identity":
+            return profileData.accountType === "individual"
+                ? hasText(register.name) && hasText(profileData.artisticName) && Boolean(profileData.birthDate)
+                : hasText(profileData.commercialName) && Boolean(profileData.creationDate);
+        case "contact":
+            return isProfileCountry(profileData.country)
+                && Boolean(profileData.city)
+                && isValidEmail(profileData.professionalEmail)
+                && hasText(profileData.professionalPhone);
+        case "association":
+            return !profileData.associatedWithCompany?.status || hasText(profileData.associatedWithCompany.companyName);
+        case "services":
+            return (profileData.services.length > 0 || hasText(profileData.otherService))
+                && (!profileData.rentsEquipment?.status || hasText(profileData.rentsEquipment.equipmentName));
+        case "social":
+            return true;
+    }
+};
 export const OnBoarding: React.FC = () => {
     const router = useRouter();
     const { user, updateLoggedUserData, expireSession } = useAuth();
@@ -175,6 +201,10 @@ export const OnBoarding: React.FC = () => {
     const activeMiniStep = miniSteps[miniStepIndex] ?? miniSteps[0];
     const isFirstMiniStep = miniStepIndex === 0;
     const isLastMiniStep = miniStepIndex === miniSteps.length - 1;
+    const canContinue = isMiniStepComplete(activeMiniStep.key, register);
+    // Um mini-step so e alcancavel com todos os anteriores preenchidos.
+    const canReachMiniStep = (index: number) =>
+        miniSteps.slice(0, index).every((step) => isMiniStepComplete(step.key, register));
 
 
     const updateProfileData = <K extends keyof ProfileData>(key: K, value: ProfileData[K]) => {
@@ -196,14 +226,17 @@ export const OnBoarding: React.FC = () => {
             }
         }));
     };
-    const countryOptions = getTaxonomy().countriesList;
+    // Os da lista e, no fim, "Outro"; as cidades terminam em "Outra".
+    const countryOptions = getProfileCountryOptions();
     const serviceOptions = getTaxonomy().services;
     // Todas as cidades do país, em qualquer província.
     const cityOptions = useMemo(
-        () => getTaxonomy().optionsWithin("city", register.profileData.country),
+        () => getProfileCityOptions(register.profileData.country),
         [register.profileData.country],
     );
     const goToNextMiniStep = () => {
+        if (!canContinue) return;
+
         setMiniStepIndex((currentStep) => Math.min(currentStep + 1, miniSteps.length - 1));
     };
     const goToPreviousMiniStep = () => {
@@ -231,7 +264,7 @@ export const OnBoarding: React.FC = () => {
     const saveOnboarding = async () => {
         setMessage("");
 
-        if (!isKnownCountry(register.profileData.country)) {
+        if (!isProfileCountry(register.profileData.country)) {
             setMessage("Selecione um pais valido.");
             setMiniStepIndex(1);
             return;
@@ -458,8 +491,9 @@ export const OnBoarding: React.FC = () => {
                                     type='button'
                                     key={step.key}
                                     aria-label={`Ir para ${step.title}`}
+                                    disabled={!canReachMiniStep(index)}
                                     onClick={() => setMiniStepIndex(index)}
-                                    className={`h-1.5 rounded-full transition-all duration-300 ${index <= miniStepIndex ? 'bg-rede-yellow' : 'bg-rede-white/15'}`}
+                                    className={`h-1.5 rounded-full transition-all duration-300 disabled:cursor-not-allowed ${index <= miniStepIndex ? 'bg-rede-yellow' : 'bg-rede-white/15'}`}
                                 />
                             ))}
                         </div>
@@ -472,21 +506,16 @@ export const OnBoarding: React.FC = () => {
                             {message}
                         </Text>
                     )}
-                    <div className='grid grid-cols-1 sm:grid-cols-3 gap-3'>
+                    <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
                         <Button type='button' variant={"secondary"} containerClassName='w-full' onClick={goToPreviousMiniStep} disabled={isFirstMiniStep || isLoading}>
                             Voltar
                         </Button>
-                        {!isLastMiniStep && (
-                            <Button type='button' variant={"secondary"} containerClassName='w-full' onClick={goToNextMiniStep} disabled={isLoading}>
-                                Pular
-                            </Button>
-                        )}
                         {isLastMiniStep ? (
-                            <Button type='button' containerClassName='w-full sm:col-span-2' className='text-rede-surface' disabled={isLoading} onClick={saveOnboarding}>
+                            <Button type='button' containerClassName='w-full' className='text-rede-surface' disabled={isLoading} onClick={saveOnboarding}>
                                 {isLoading ? 'A processar...' : 'Terminar'}
                             </Button>
                         ) : (
-                            <Button type='button' containerClassName='w-full' className='text-rede-surface' onClick={goToNextMiniStep} disabled={isLoading}>
+                            <Button type='button' containerClassName='w-full' className='text-rede-surface' onClick={goToNextMiniStep} disabled={!canContinue || isLoading}>
                                 Continuar
                             </Button>
                         )}
