@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const productionApiBaseUrl = "https://rede-back.vercel.app";
+const productionApiBaseUrl = "https://api.redecinemapaloptl.org";
 // 127.0.0.1 e nao localhost: no Node, localhost pode resolver para ::1 (IPv6)
 // e cair noutro servico na mesma porta (ex: um container Docker).
 const localApiBaseUrl = "http://127.0.0.1:4001";
