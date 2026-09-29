@@ -13,7 +13,7 @@ import {
   selectTriggerVariants,
   variantStyles,
 } from './input-select'
-import { useAnchoredPopover, useScrollHighlightedIntoView } from './use-anchored-popover'
+import { popoverPositionStyle, useAnchoredPopover, useScrollHighlightedIntoView } from './use-anchored-popover'
 
 export interface InputSelectMultipleProps {
   options: InputSelectOption[]
@@ -164,10 +164,10 @@ export const InputSelectMultiple = ({
       {isOpen && createPortal(
         <div
           ref={popoverRef}
-          style={{ position: 'fixed', top: coords.top, left: coords.left, width: coords.width }}
+          style={popoverPositionStyle(coords)}
           className={cn(popoverClassNames, popoverClassName, v.popover)}
         >
-          <ul ref={listRef} role="listbox" aria-multiselectable="true" className={optionListClassNames}>
+          <ul ref={listRef} role="listbox" aria-multiselectable="true" className={optionListClassNames} style={{ maxHeight: coords.maxHeight }}>
             {filteredOptions.length === 0 && (
               <li className="px-4 py-2.5 text-[13px] text-rede-white/40">{emptyMessage}</li>
             )}

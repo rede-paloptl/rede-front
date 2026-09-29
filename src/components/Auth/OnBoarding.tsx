@@ -7,7 +7,8 @@ import Link from "next/link";
 import { Select } from "../ui/select";
 import { socialFields } from "./data";
 import { getProfileCityOptions, getProfileCountryOptions, getTaxonomy, isProfileCountry } from "@/lib/taxonomy";
-import { SelectMultiple } from "../ui/select-multiple";
+import { Tag } from "../ui/tag";
+import { X } from "lucide-react";
 import { SocialNetwork } from "@/types/Profile";
 import { User } from "@/types/User";
 import { customBlur } from "@/app/fonts";
@@ -257,15 +258,25 @@ export const OnBoarding: React.FC = () => {
             };
         });
     }
-    const handleServicesChange = (value: string[]) => {
+    const setServices = (value: string[]) => {
         setSelectedServices(value);
         updateProfileData("services", value);
     };
+    const addService = (value: string) => {
+        if (!value || selectedServices.includes(value)) return;
+
+        setServices([...selectedServices, value]);
+    };
+    const removeService = (value: string) => {
+        setServices(selectedServices.filter((service) => service !== value));
+    };
+    const serviceLabel = (value: string) => getTaxonomy().label(value, ["service"]);
+    const availableServiceOptions = serviceOptions.filter((option) => !selectedServices.includes(option.value));
     const saveOnboarding = async () => {
         setMessage("");
 
         if (!isProfileCountry(register.profileData.country)) {
-            setMessage("Selecione um pais valido.");
+            setMessage("Selecione um país válido.");
             setMiniStepIndex(1);
             return;
         }
@@ -375,12 +386,12 @@ export const OnBoarding: React.FC = () => {
         <div className='grid grid-cols-1 gap-4'>
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                 <div className={fieldGroupClassName}>
-                    <label className={labelClassName}>Pais</label>
-                    <Select variant={"secondary"} options={countryOptions.map(({ label, value }) => ({ label, value }))} value={register.profileData.country} onChange={updateCountry} placeholder='Selecione o pais' />
+                    <label className={labelClassName}>País</label>
+                    <Select variant={"secondary"} options={countryOptions.map(({ label, value }) => ({ label, value }))} value={register.profileData.country} onChange={updateCountry} placeholder='Selecione o país' />
                 </div>
                 <div className={fieldGroupClassName}>
                     <label className={labelClassName}>Cidade</label>
-                    <Select variant={"secondary"} options={cityOptions} value={register.profileData.city} onChange={(value) => updateProfileData("city", value)} placeholder={register.profileData.country ? 'Selecione a cidade' : 'Selecione o pais primeiro'} disabled={!register.profileData.country} />
+                    <Select variant={"secondary"} options={cityOptions} value={register.profileData.city} onChange={(value) => updateProfileData("city", value)} placeholder={register.profileData.country ? 'Selecione a cidade' : 'Selecione o país primeiro'} disabled={!register.profileData.country} />
                 </div>
             </div>
             <div className={fieldGroupClassName}>
@@ -413,12 +424,38 @@ export const OnBoarding: React.FC = () => {
     const renderServicesStep = () => (
         <div className='grid grid-cols-1 gap-4'>
             <div className={fieldGroupClassName}>
-                <label className={labelClassName}>Servicos fornecidos</label>
-                <SelectMultiple variant={"secondary"} options={serviceOptions} value={selectedServices} onChange={handleServicesChange} placeholder='Selecione todos os servicos' />
+                <label className={labelClassName}>Serviços fornecidos</label>
+                <div className="flex min-h-11 flex-wrap items-center gap-2 rounded-[8px] border-[1.3px] border-white px-3 py-2">
+                    {selectedServices.length > 0 ? selectedServices.map((service) => (
+                        <Tag key={service} className="flex items-center gap-1 bg-rede-surface">
+                            {serviceLabel(service)}
+                            <button
+                                type="button"
+                                aria-label={`Remover ${serviceLabel(service)}`}
+                                onClick={() => removeService(service)}
+                                className="inline-flex cursor-pointer"
+                            >
+                                <X width={12} height={12} color="#ffffff" />
+                            </button>
+                        </Tag>
+                    )) : (
+                        <Text className="text-[14px] leading-5 text-rede-white/60">Nenhum selecionado</Text>
+                    )}
+                </div>
+                <Select
+                    variant={"secondary"}
+                    options={availableServiceOptions}
+                    value=""
+                    onChange={addService}
+                    placeholder='Adicionar serviço'
+                    triggerClassName="border-[1.3px] border-white px-3 text-rede-white outline-none"
+                    popoverClassName="rounded-[8px] border-[1.3px] border-white px-3 text-rede-white outline-none mt-[10px]"
+                    satelliteClassName="border-[1.3px] border-white"
+                />
             </div>
             <div className={fieldGroupClassName}>
-                <label className={labelClassName} htmlFor='otherServiceField'>Acrescentar servico não descrito</label>
-                <Input variant={"secondary"} placeholder='Outro servico' id='otherServiceField' value={register.profileData.otherService} onChange={(event) => updateProfileData("otherService", event.target.value)} />
+                <label className={labelClassName} htmlFor='otherServiceField'>Acrescentar serviço não descrito</label>
+                <Input variant={"secondary"} placeholder='Outro serviço' id='otherServiceField' value={register.profileData.otherService} onChange={(event) => updateProfileData("otherService", event.target.value)} />
             </div>
             <div className={fieldGroupClassName}>
                 <label className={labelClassName}>A empresa/organizacao fornece aluguer de equipamentos?</label>

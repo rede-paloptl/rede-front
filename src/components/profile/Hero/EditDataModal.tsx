@@ -13,7 +13,6 @@ import { Heading } from "@/components/ui/heading"
 import { Input } from "@/components/ui/Input"
 import { Modal } from "@/components/ui/modal"
 import { Select } from "@/components/ui/select"
-import { SelectMultiple } from "@/components/ui/select-multiple"
 import { Tag } from "@/components/ui/tag"
 import { Text } from "@/components/ui/text"
 import { Textarea } from "@/components/ui/textarea"
@@ -211,6 +210,7 @@ const EditDataForm: React.FC<EditDataModalProps> = ({ profile, profileData, isSa
 
   const coreSkillOptions = getCoreSkillOptions(profileData).filter((option) => !values.coreSkills.includes(option.value));
   const skillOptions = getSkillOptions(profileData).filter((option) => !values.skills.includes(option.value));
+  const serviceOptionsAvailable = serviceOptions.filter((option) => !values.services.includes(option.value));
 
   const set = <K extends keyof FormValues>(key: K, value: FormValues[K]) => {
     setValues((current) => ({ ...current, [key]: value }));
@@ -270,15 +270,20 @@ const EditDataForm: React.FC<EditDataModalProps> = ({ profile, profileData, isSa
     if (!saved) setSubmitError("Não foi possível guardar os dados. Tente novamente.");
   };
 
-  const renderTags = (items: string[], onRemove: (item: string) => void) => (
+  const renderTags = (
+    items: string[],
+    onRemove: (item: string) => void,
+    toLabel: (item: string) => string = toSkillLabel,
+    emptyText = "Nenhuma selecionada",
+  ) => (
     <div className="flex min-h-11 flex-wrap items-center gap-2 rounded-[8px] border-[1.3px] border-white px-3 py-2">
       {items.length > 0 ? items.map((item) => (
         <Tag key={item} className="flex items-center gap-1 bg-rede-surface">
-          {toSkillLabel(item)}
+          {toLabel(item)}
           <X width={12} height={12} color="#ffffff" className="cursor-pointer" onClick={() => !isSaving && onRemove(item)} />
         </Tag>
       )) : (
-        <Text className="text-[14px] leading-5 text-rede-white/60">Nenhuma selecionada</Text>
+        <Text className="text-[14px] leading-5 text-rede-white/60">{emptyText}</Text>
       )}
     </div>
   );
@@ -382,7 +387,23 @@ const EditDataForm: React.FC<EditDataModalProps> = ({ profile, profileData, isSa
           <>
             <SectionTitle>Serviços</SectionTitle>
             <Field label="Serviços fornecidos">
-              <SelectMultiple variant="secondary" options={serviceOptions} value={values.services} placeholder="Selecione todos os serviços" disabled={isSaving} onChange={(value) => set("services", value)} />
+              {renderTags(
+                values.services,
+                (service) => set("services", values.services.filter((item) => item !== service)),
+                (service) => getTaxonomy().label(service, ["service"]),
+                "Nenhum selecionado",
+              )}
+              <Select
+                variant="secondary"
+                value=""
+                placeholder="Adicionar serviço"
+                options={serviceOptionsAvailable}
+                disabled={isSaving}
+                onChange={(value) => {
+                  if (value) set("services", [...values.services, value]);
+                }}
+                {...selectClassNames}
+              />
             </Field>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Outro serviço">
