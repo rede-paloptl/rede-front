@@ -6,8 +6,9 @@ import { fetchTaxonomyTerms, getTaxonomy, setTaxonomyTerms, type TaxonomyTerm } 
 
 /**
  * Preenche o store das listas (lib/taxonomy) com os termos que o servidor já
- * carregou, antes de qualquer filho desenhar. Se o servidor não os conseguiu
- * obter, tenta no browser e volta a desenhar quando chegarem.
+ * carregou, antes de qualquer filho desenhar. Depois vai sempre buscar a
+ * lista actual à API e volta a desenhar: as páginas estáticas trazem a lista
+ * do dia do deploy, e o que se mudou no painel desde então só chega assim.
  */
 export const TaxonomyProvider = ({ initialTerms, children }: { initialTerms: TaxonomyTerm[]; children: ReactNode }) => {
     // Durante o render (e não num efeito): os filhos lêem o store logo a seguir.
@@ -18,8 +19,6 @@ export const TaxonomyProvider = ({ initialTerms, children }: { initialTerms: Tax
     const [, setVersion] = useState(getTaxonomy().version);
 
     useEffect(() => {
-        if (getTaxonomy().terms.length > 0) return;
-
         fetchTaxonomyTerms()
             .then((terms) => {
                 setTaxonomyTerms(terms);
