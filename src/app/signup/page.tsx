@@ -29,8 +29,8 @@ export default function SignupPage() {
             {/* O scroll fica neste contentor, com o espaço da barra reservado dos dois lados:
                 ao trocar o tipo de perfil o form cresce, mas não salta nem sai do centro. */}
             <div className="w-full h-dvh bg-[url('/assets/signup/signup.png')] bg-cover bg-center flex justify-center items-start overflow-y-auto [scrollbar-gutter:stable_both-edges] pt-28 pb-10">
-                <Signup />
-                {/* <InformationBox /> */}
+                {/* <Signup /> */}
+                <InformationBox />
             </div >
         </GuestOnly>
     )
