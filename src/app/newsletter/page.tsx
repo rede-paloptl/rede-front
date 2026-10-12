@@ -11,7 +11,7 @@ export default function NewsletterPage() {
             <Hero
                 imageUrl="/assets/newsletter/hero.png"
                 title="Newsletters"
-                description="Acesse as edições anteriores da nossa newsletter mensal." />
+                description="Acesse todas as edições da nossa newsletter" />
             <SectionNewsletters />
             <Footer />
         </main>

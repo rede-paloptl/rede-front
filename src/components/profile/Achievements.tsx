@@ -160,10 +160,15 @@ const EntryForm: React.FC<EntryFormProps> = ({
 type AddEntryTileProps = {
   onAdd: () => void;
   disabled?: boolean;
+  /** Explica porque e que ainda nao se pode adicionar. */
+  notice?: string;
 };
 
-const AddEntryTile: React.FC<AddEntryTileProps> = ({ onAdd, disabled }) => (
-  <div className="flex h-32 w-full items-center justify-center rounded-lg border border-dashed border-rede-white/30 px-4 sm:h-36">
+const AddEntryTile: React.FC<AddEntryTileProps> = ({ onAdd, disabled, notice }) => (
+  <div className="flex h-32 w-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-rede-white/30 px-4 text-center sm:h-36">
+    {notice && (
+      <Text className="text-[13px] leading-5 text-rede-white/60">{notice}</Text>
+    )}
     <Button
       variant="secondary"
       className="border border-dashed"
@@ -351,7 +356,13 @@ export const Achievements: React.FC<AchievementsProps> = ({
                   onCancel={closeForm}
                 />
               ) : (
-                <AddEntryTile onAdd={openNewEntry} disabled={isSaving} />
+                // Festivais, premios e exibicoes referem-se a filmes: sem
+                // filmografia nao ha nada a que associar a entrada.
+                <AddEntryTile
+                  onAdd={openNewEntry}
+                  disabled={isSaving || films.length === 0}
+                  notice={films.length === 0 ? "Adicione primeiro um filme à sua filmografia." : undefined}
+                />
               )}
             </div>
           )}

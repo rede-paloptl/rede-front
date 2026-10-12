@@ -2,9 +2,15 @@
 import * as React from 'react'
 import { cva } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
-import { Check, ChevronDown } from 'lucide-react'
+import { Check, ChevronDown, Search } from 'lucide-react'
 import { createPortal } from 'react-dom';
-import { popoverPositionStyle, useAnchoredPopover } from './use-anchored-popover'
+import { filterOptions } from './input-select'
+import { popoverPositionStyle, useAnchoredPopover, useScrollHighlightedIntoView } from './use-anchored-popover'
+
+// A partir de quantas opcoes a lista ganha campo de pesquisa.
+const SEARCH_MIN_OPTIONS = 5
+// Altura do campo de pesquisa, descontada a lista para o menu caber no ecra.
+const SEARCH_FIELD_HEIGHT = 48
 
 const selectTriggerVariants = cva(
   'w-full inline-flex items-center justify-between font-medium transition-all rounded-lg bg-transparent text-rede-white border border-white/90 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40 text-left',
@@ -99,6 +105,10 @@ export interface SelectProps {
   triggerClassName?: string
   satelliteClassName?: string
   popoverClassName?: string
+  /** Campo de pesquisa no menu. Por omissao, so em listas com mais de 5 opcoes. */
+  searchable?: boolean
+  searchPlaceholder?: string
+  emptyMessage?: string
 }
 
 export const Select = ({
@@ -113,23 +123,74 @@ export const Select = ({
   triggerClassName,
   satelliteClassName,
   popoverClassName,
+  searchable,
+  searchPlaceholder = 'Pesquisar...',
+  emptyMessage = 'Nenhum resultado',
 }: SelectProps) => {
   const [isOpen, setIsOpen] = React.useState(false)
-  const close = React.useCallback(() => setIsOpen(false), [])
+  const [query, setQuery] = React.useState('')
+  const [highlightedIndex, setHighlightedIndex] = React.useState(0)
+  const listRef = React.useRef<HTMLUListElement>(null)
+
+  const close = React.useCallback(() => {
+    setIsOpen(false)
+    setQuery('')
+  }, [])
   // anchorRef engloba trigger + chevron
   const { coords, containerRef, anchorRef, popoverRef } = useAnchoredPopover(isOpen, close)
+
+  useScrollHighlightedIntoView(listRef, isOpen, highlightedIndex)
 
   const selectedOption = options.find((opt) => opt.value === value)
   const v = variantStyles[variant]
 
+  // Listas curtas (Sim/Não, tipos de entrada) leem-se de relance: a pesquisa
+  // so aparece quando ha opcoes suficientes para valer a pena.
+  const isSearchable = searchable ?? options.length > SEARCH_MIN_OPTIONS
+
+  // A opcao de repor ("Todos...") fica sempre visivel, mesmo a pesquisar.
+  const filteredOptions = React.useMemo(() => {
+    if (!isSearchable || !query.trim()) return options
+
+    const matches = new Set(filterOptions(options, query))
+    return options.filter((option, index) => matches.has(option) || (index === 0 && option.value === ''))
+  }, [options, query, isSearchable])
+
+  const open = () => {
+    setIsOpen(true)
+    setQuery('')
+    setHighlightedIndex(Math.max(options.findIndex((opt) => opt.value === value), 0))
+  }
+
+  const toggle = () => (isOpen ? close() : open())
+
+  const selectOption = (option: SelectOption) => {
+    onChange?.(option.value)
+    close()
+  }
+
+  const handleSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      setHighlightedIndex((i) => Math.min(i + 1, filteredOptions.length - 1))
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      setHighlightedIndex((i) => Math.max(i - 1, 0))
+    } else if (event.key === 'Enter') {
+      event.preventDefault()
+      const option = filteredOptions[highlightedIndex]
+      if (option) selectOption(option)
+    }
+  }
+
   React.useEffect(() => {
     if (!isOpen) return
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setIsOpen(false)
+      if (event.key === 'Escape') close()
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen])
+  }, [isOpen, close])
 
 
   return (
@@ -142,7 +203,7 @@ export const Select = ({
           disabled={disabled}
           aria-haspopup="listbox"
           aria-expanded={isOpen}
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={toggle}
           className={cn(
             selectTriggerVariants({ size }),
             triggerClassName,
@@ -161,7 +222,7 @@ export const Select = ({
           // Repete o trigger: fora da ordem de tabulação e do leitor de ecrã.
           tabIndex={-1}
           aria-hidden="true"
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={toggle}
           className={cn(
             satelliteVariants({ size }),
             satelliteClassName,
@@ -184,35 +245,61 @@ export const Select = ({
             v.popover,
           )}
         >
-          <ul role="listbox" style={{ maxHeight: coords.maxHeight }} className="max-h-80 overflow-y-auto space-y-1
+          {isSearchable && (
+            <div className="mb-1.5 flex h-10 items-center gap-2 border-b border-white/10 px-3">
+              <Search width={14} height={14} aria-hidden="true" className="shrink-0 text-rede-white/40" />
+              <input
+                type="text"
+                autoFocus
+                value={query}
+                placeholder={searchPlaceholder}
+                aria-label={searchPlaceholder}
+                onChange={(event) => {
+                  setQuery(event.target.value)
+                  setHighlightedIndex(0)
+                }}
+                onKeyDown={handleSearchKeyDown}
+                className="h-full w-full bg-transparent text-[14px] text-rede-white placeholder:text-rede-white/40 focus:outline-none"
+              />
+            </div>
+          )}
+          <ul
+            ref={listRef}
+            role="listbox"
+            style={{ maxHeight: isSearchable ? Math.max(coords.maxHeight - SEARCH_FIELD_HEIGHT, 120) : coords.maxHeight }}
+            className="max-h-80 overflow-y-auto space-y-1
       [&::-webkit-scrollbar]:w-2
       [&::-webkit-scrollbar]:h-3
       [&::-webkit-scrollbar-track]:bg-transparent
       [&::-webkit-scrollbar-thumb]:bg-rede-yellow
       [&::-webkit-scrollbar-thumb]:rounded-full
     ">
-            {options.map((option, index) => {
+            {filteredOptions.length === 0 && (
+              <li className="px-4 py-2.5 text-[13px] text-rede-white/40">{emptyMessage}</li>
+            )}
+            {filteredOptions.map((option, index) => {
               const isSelected = option.value === value
+              const isHighlighted = isSearchable && index === highlightedIndex
               // A opção de repor ("Todos...") fica separada das escolhas concretas.
               const isResetOption =
-                index === 0 && option.value === '' && options.length > 1
+                index === 0 && option.value === '' && filteredOptions.length > 1
               return (
                 <li
                   key={option.value}
                   role="presentation"
+                  data-option-index={index}
                   className={cn(isResetOption && 'border-b border-white/10 pb-1')}
                 >
                   <button
                     type="button"
                     role="option"
                     aria-selected={isSelected}
-                    onClick={() => {
-                      if (onChange) onChange(option.value)
-                      setIsOpen(false)
-                    }}
+                    onMouseEnter={() => setHighlightedIndex(index)}
+                    onClick={() => selectOption(option)}
                     className={cn(
                       'w-full text-left px-4 py-2.5 rounded-xl text-[14px] font-medium transition-all duration-150',
                       'text-rede-white/70 hover:bg-white/5 hover:text-rede-white',
+                      isHighlighted && !isSelected && 'bg-white/5 text-rede-white',
                       isSelected && v.selected,
                     )}
                   >

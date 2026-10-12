@@ -70,6 +70,17 @@ const getRequiredFields = (): RequiredField[] => [
   ...(getFilmFormatOptions().length > 0 ? (["format"] as const) : []),
 ];
 
+// Na ficcao o tema e opcional: muitas obras nao se encaixam numa tematica.
+const GENRES_WITH_OPTIONAL_THEME = ["ficcao"];
+
+const isThemeRequired = (genre: string) =>
+  !GENRES_WITH_OPTIONAL_THEME.includes(getTaxonomy().find(genre, ["film-genre"])?.slug ?? "");
+
+// A capa sai a 1200px de largura na proporcao do cartao (300x220 = 15:11).
+const FILM_COVER_MAX_SIZE_MB = 3;
+const FILM_COVER_HINT =
+  "JPG, PNG ou WebP, até 3 MB. Imagem horizontal, de preferência 1200×880 px ou maior (proporção 15:11, perto de 4:3).";
+
 const uniqueValues = (values: string[]) =>
   Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
 
@@ -235,7 +246,7 @@ export const AddFilmModal: React.FC<FilmFormModalProps> = ({
     if (
       getRequiredFields().some((field) => !payload[field]) ||
       payload.countries.length === 0 ||
-      payload.themes.length === 0
+      (isThemeRequired(payload.genre) && payload.themes.length === 0)
     ) {
       setError("Preencha todos os campos obrigatórios do filme.");
       return;
@@ -271,6 +282,8 @@ export const AddFilmModal: React.FC<FilmFormModalProps> = ({
           purpose="film"
           aspectRatio={300 / 220}
           minHeight={252}
+          maxSizeMB={FILM_COVER_MAX_SIZE_MB}
+          formatHint={FILM_COVER_HINT}
           helperText={"Mantenha o conteúdo principal dentro da área vazia. As faixas laterais podem ser cortadas consoante o formato do cartão."}
           uploadLabel="Aplicar imagem"
           onUploaded={(url) => update("cover", url)}
@@ -322,18 +335,6 @@ export const AddFilmModal: React.FC<FilmFormModalProps> = ({
           />
         </div>
 
-        <div className="flex flex-col gap-2">
-          <FieldLabel>Tema</FieldLabel>
-          <SelectedTags values={form.themes} onRemove={(theme) => removeFrom("themes", theme)} />
-          <InputSelectMultiple
-            {...searchableSelectProps}
-            placeholder="Pesquisar e adicionar tema"
-            options={getFilmThemeOptions()}
-            value={form.themes}
-            onChange={(themes) => update("themes", themes)}
-          />
-        </div>
-
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-2">
           <div className="flex flex-col gap-2">
             <FieldLabel>Formato</FieldLabel>
@@ -347,16 +348,29 @@ export const AddFilmModal: React.FC<FilmFormModalProps> = ({
             />
           </div>
           <div className="flex flex-col gap-2">
-            <FieldLabel>Gênero</FieldLabel>
+            <FieldLabel>Género</FieldLabel>
             <InputSelect
               {...searchableSelectProps}
               allowFreeText={false}
-              placeholder="Pesquisar gênero"
+              placeholder="Pesquisar género"
               options={getFilmGenreOptions()}
               value={form.genre}
               onChange={(value) => update("genre", value)}
             />
           </div>
+        </div>
+
+        {/* O tema vem depois do genero: na ficcao passa a ser opcional. */}
+        <div className="flex flex-col gap-2">
+          <FieldLabel hint={isThemeRequired(form.genre) ? undefined : "(opcional)"}>Tema</FieldLabel>
+          <SelectedTags values={form.themes} onRemove={(theme) => removeFrom("themes", theme)} />
+          <InputSelectMultiple
+            {...searchableSelectProps}
+            placeholder="Pesquisar e adicionar tema"
+            options={getFilmThemeOptions()}
+            value={form.themes}
+            onChange={(themes) => update("themes", themes)}
+          />
         </div>
 
         <div className="flex flex-col gap-2">

@@ -41,8 +41,10 @@ export const TopBar: React.FC = () => {
 
   const userMenuRef = useRef<HTMLDivElement>(null);
 
+  // `||` e nao `??`: o perfil grava imageUrl "" quando a foto esta no nivel de
+  // cima (ex.: foto do Google), e uma string vazia escondia o avatar.
   const avatarUrl =
-    user?.profileData?.imageUrl ?? user?.imageUrl ?? user?.avatarUrl;
+    user?.profileData?.imageUrl || user?.imageUrl || user?.avatarUrl;
 
   const profession =
   user?.profileData?.coreSkills?.join(" | ") ?? user?.coreSkills?.join(" | ") ?? "";

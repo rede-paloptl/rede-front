@@ -108,16 +108,13 @@ export const Login: React.FC = () => {
                 return;
             }
 
+            // Quem encaminha e o GuestOnly da pagina (para o perfil), assim que a
+            // sessao existe. Um redirect proprio aqui disparava 3s depois e
+            // levava o utilizador para a home.
             if (responseData?.user) {
                 setIsError(false);
                 setShowMessaage(true);
                 setMessage("Sessão iniciada com sucesso! A redirecionar...");
-
-                setTimeout(() => {
-                    setShowMessaage(false);
-                    setMessage("");
-                    window.location.href = "/"
-                }, 3000);
             }
 
         } catch {
@@ -168,12 +165,6 @@ export const Login: React.FC = () => {
                 setIsError(false);
                 setShowMessaage(true);
                 setMessage("Sessão iniciada com sucesso! A redirecionar...");
-
-                setTimeout(() => {
-                    setShowMessaage(false);
-                    setMessage("");
-                    window.location.href = "/"
-                }, 3000);
             }
         } catch (err) {
             setIsError(true);
