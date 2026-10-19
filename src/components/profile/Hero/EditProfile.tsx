@@ -220,8 +220,9 @@ export const EditProfile: React.FC<EditProfileType> = ({
   };
 
   return (
-    <div className='w-full max-w-360 flex gap-5 pt-20'>
-      <div className='w-53 h-53'>
+    // Telemovel: foto em cima e campos em coluna; a partir de lg, como no ShowProfile.
+    <div className='flex w-full max-w-360 flex-col items-center gap-5 lg:flex-row lg:items-start lg:pt-20'>
+      <div className='size-32 shrink-0 sm:size-40 lg:size-53'>
         <Image
           width={212}
           height={212}
@@ -230,12 +231,12 @@ export const EditProfile: React.FC<EditProfileType> = ({
           className='w-full h-full object-cover'
         />
       </div>
-      <div className='flex flex-col gap-4'>
-        <div className='w-full flex flex-col gap-2'>
+      <div className='flex w-full min-w-0 flex-col gap-4 lg:w-auto'>
+        <div className='w-full flex flex-col gap-4 lg:gap-2'>
 
-          <div className="w-full flex gap-4">
-            <div className='flex flex-col gap-2'>
-              <Text className='text-[20px] leading-7 font-medium'>Nome</Text>
+          <div className="w-full flex flex-col gap-4 sm:flex-row">
+            <div className='flex min-w-0 flex-col gap-2 sm:flex-1 lg:flex-none'>
+              <Text className='text-[16px] leading-6 font-medium lg:text-[20px] lg:leading-7'>Nome</Text>
               <Input
                 variant={"secondary"}
                 value={draft.name}
@@ -245,11 +246,11 @@ export const EditProfile: React.FC<EditProfileType> = ({
               />
             </div>
 
-            <div className='flex flex-col gap-2'>
-              <Text className='text-[20px] leading-7 font-medium'>Competências principais</Text>
+            <div className='flex min-w-0 flex-col gap-2 sm:flex-1 lg:flex-none'>
+              <Text className='text-[16px] leading-6 font-medium lg:text-[20px] lg:leading-7'>Competências principais</Text>
 
               <div className="flex flex-col gap-2">
-                <div className="flex min-h-11 w-[450px] flex-wrap items-center gap-2 border-[1.3px] border-white px-3 py-2 rounded-[8px]">
+                <div className="flex min-h-11 w-full flex-wrap items-center gap-2 border-[1.3px] border-white px-3 py-2 rounded-[8px] lg:w-[450px]">
                   {draft.coreSkills.length > 0 ? draft.coreSkills.map((coreSkill) => (
                     <Tag key={coreSkill} className="flex items-center gap-1 bg-rede-surface">
                       {toSkillLabel(coreSkill)}
@@ -295,9 +296,9 @@ export const EditProfile: React.FC<EditProfileType> = ({
           */}
 
           <div className='flex flex-col gap-2'>
-            <Text className='text-[20px] leading-7 font-medium'>Contactos e redes</Text>
+            <Text className='text-[16px] leading-6 font-medium lg:text-[20px] lg:leading-7'>Contactos e redes</Text>
 
-            <div className='flex items-center gap-3'>
+            <div className='flex flex-wrap items-center gap-3'>
               <Button
                 variant={"secondary"}
                 disabled={isSaving}
@@ -316,7 +317,7 @@ export const EditProfile: React.FC<EditProfileType> = ({
             </div>
           </div>
 
-          <div className='w-full flex gap-1'>
+          <div className='w-full flex flex-wrap gap-1'>
             <Button disabled={isSaving} onClick={() => onSave?.(draft)}>
               {isSaving ? "A guardar..." : "Guardar"}
             </Button>

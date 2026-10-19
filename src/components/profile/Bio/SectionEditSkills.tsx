@@ -80,9 +80,9 @@ export const SectionEditSkills: React.FC<SectionEditSkillsProps> = ({
     };
 
     return (
-        <div className="w-1/2 flex flex-col h-auto">
+        <div className="flex h-auto w-full flex-col lg:w-1/2">
             <div className="flex items-center gap-4">
-                <Heading className={`${customBlur.className} text-[48px] leading-12`}>
+                <Heading className={`${customBlur.className} text-[32px] leading-9 sm:text-[40px] sm:leading-11 lg:text-[48px] lg:leading-12`}>
                     Competências
                 </Heading>
             </div>
