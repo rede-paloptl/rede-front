@@ -1,4 +1,4 @@
-
+import { heroPageMetadata } from "@/lib/seo";
 import { Footer } from "@/components/Footer";
 import { TopBar } from "@/components/TopBar";
 import { Hero } from "@/components/Hero";
@@ -9,6 +9,9 @@ import { ObjectivesSection } from "@/components/about/ObjectivesSection";
 import { GovernanceFrameworkSection } from "@/components/about/GovernanceFrameworkSection";
 import { CommunicationAndVisibilityStrategy } from "@/components/about/CommunicationAndVisibilityStrategy";
 
+
+// Titulo, texto e imagem do destaque (Personalizar > Destaques das paginas).
+export const generateMetadata = () => heroPageMetadata("about", "/about");
 
 export default function AboutPage() {
   return (

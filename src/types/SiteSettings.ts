@@ -125,6 +125,10 @@ export type AboutSettings = {
 export type SeoSettings = {
   siteName: string;
   description: string;
+  /** Imagem quando se partilha a home ou uma pagina sem imagem propria. */
+  shareImageUrl: string;
+  /** Codigo da meta tag do Google Search Console (vazio: sem verificacao). */
+  googleSiteVerification: string;
 };
 
 export type SiteSettings = {
@@ -329,6 +333,8 @@ export const defaultSiteSettings: SiteSettings = {
     siteName: "Rede Cinema PALOP-TL",
     description:
       "Plataforma da rede de cinema e audiovisual dos países africanos de língua oficial portuguesa e Timor-Leste: profissionais, notícias, oportunidades e agência.",
+    shareImageUrl: "/assets/home/hero-1.png",
+    googleSiteVerification: "",
   },
 };
 

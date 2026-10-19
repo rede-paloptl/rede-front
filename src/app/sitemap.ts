@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getServerApiBaseUrl } from "@/lib/serverApi";
+import { listSharedNews, listSharedOpportunities } from "@/lib/shareContent";
 import { SITE_URL } from "@/lib/site";
 import type { User } from "@/types/User";
 import { normalizeUsername, reservedRoutes } from "./[username]/profile";
@@ -48,6 +49,25 @@ const getProfileEntries = async (): Promise<MetadataRoute.Sitemap> => {
   }
 };
 
+/** Noticias e oportunidades publicadas (a API so devolve essas). */
+const getContentEntries = async (): Promise<MetadataRoute.Sitemap> => {
+  const [news, opportunities] = await Promise.all([listSharedNews(), listSharedOpportunities()]);
+
+  return [
+    ...news.map((item) => ({
+      url: `${SITE_URL}/news-details?id=${encodeURIComponent(item.id)}`,
+      lastModified: item.publishedAt ? new Date(item.publishedAt) : undefined,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    })),
+    ...opportunities.map((item) => ({
+      url: `${SITE_URL}/opportunity-details?id=${encodeURIComponent(item.id)}`,
+      changeFrequency: "weekly" as const,
+      priority: 0.6,
+    })),
+  ];
+};
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
@@ -59,5 +79,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: route.priority,
     })),
     ...(await getProfileEntries()),
+    ...(await getContentEntries()),
   ];
 }

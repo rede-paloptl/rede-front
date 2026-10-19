@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
+import { ogImagePath, ogImages } from "@/lib/ogImage";
 import { SITE_URL } from "@/lib/site";
 import { ensureTaxonomy } from "@/lib/taxonomy";
 import { ensureSiteSettings } from "@/lib/siteSettings";
@@ -15,6 +16,8 @@ const poppins = Poppins({
 // Nome e descrição geridos no painel (Personalizar > SEO).
 export async function generateMetadata(): Promise<Metadata> {
   const { seo } = await ensureSiteSettings();
+  // Imagem comprimida (app/og): vale para a home e paginas sem imagem propria.
+  const shareImage = ogImagePath("/og/site.jpg", seo.shareImageUrl);
 
   return {
     metadataBase: new URL(SITE_URL),
@@ -28,10 +31,13 @@ export async function generateMetadata(): Promise<Metadata> {
       type: "website",
       siteName: seo.siteName,
       locale: "pt_PT",
+      images: ogImages(shareImage, seo.siteName),
     },
     twitter: {
       card: "summary_large_image",
+      images: shareImage ? [shareImage] : undefined,
     },
+    ...(seo.googleSiteVerification ? { verification: { google: seo.googleSiteVerification } } : {}),
   };
 }
 
