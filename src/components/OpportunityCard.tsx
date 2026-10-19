@@ -28,6 +28,8 @@ export type OpportunityType = {
   cover: string;
   /** Onde o visitante se candidata; sem link o botão não aparece. */
   applyLink?: string | null;
+  /** ISO do dia em que encerrou (só nas "expired" encerradas pelo painel). */
+  closedAt?: string | null;
 }
 
 export const OpportunityCard: React.FC<{ opportunityData: OpportunityType }> = ({ opportunityData }) => {
