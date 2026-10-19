@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Footer from "@/components/Footer";
@@ -64,7 +65,12 @@ export async function generateMetadata({ params }: PublicProfilePageProps): Prom
   const { seo } = await ensureSiteSettings();
   const description = buildDescription(profile, seo.siteName);
   const canonical = `/${normalizeUsername(profile.profileData?.username ?? username)}`;
-  const image = getProfileImage(profile);
+  const sourceImage = getProfileImage(profile);
+  // JPEG reduzido (og-image.jpg/route.ts): o WhatsApp nao mostra imagens grandes.
+  // O ?v= muda com a foto, para os crawlers nao reutilizarem a antiga.
+  const image = sourceImage
+    ? `${canonical}/og-image.jpg?v=${createHash("sha1").update(sourceImage).digest("hex").slice(0, 10)}`
+    : undefined;
 
   return {
     title,
@@ -77,7 +83,7 @@ export async function generateMetadata({ params }: PublicProfilePageProps): Prom
       description,
       siteName: seo.siteName,
       locale: "pt_PT",
-      images: image ? [{ url: image, alt: `Fotografia de ${displayName}` }] : undefined,
+      images: image ? [{ url: image, type: "image/jpeg", alt: `Fotografia de ${displayName}` }] : undefined,
     },
     twitter: {
       card: image ? "summary_large_image" : "summary",
