@@ -75,7 +75,7 @@ export const Hero: React.FC<HeroProps> = ({
 
   return (
     <section className="h-auto w-full">
-      <div className="relative mx-auto min-h-[580px] w-full max-w-480 overflow-hidden sm:min-h-[540px] lg:h-124.25 lg:min-h-0">
+      <div className="relative mx-auto w-full max-w-480 overflow-hidden lg:h-124.25">
         <Image
           src={profileData.coverImageUrl || placeholders.profileCoverUrl}
           alt="Capa do perfil"
@@ -87,11 +87,12 @@ export const Hero: React.FC<HeroProps> = ({
 
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 bg-black/20 lg:bg-transparent"
+          className="pointer-events-none absolute inset-0 bg-black/55 lg:bg-transparent"
         />
 
         {isAuthenticated && (
-          <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
+          // No telemovel fica no fundo da capa, longe do menu do topo.
+          <div className="absolute bottom-4 right-4 z-20 sm:right-6 lg:bottom-auto lg:top-6">
             <Button
               variant="secondary"
               disabled={isSaving}
@@ -105,7 +106,8 @@ export const Hero: React.FC<HeroProps> = ({
           </div>
         )}
 
-        <div className="absolute inset-0 z-10 flex items-center justify-center overflow-y-auto px-4 pb-6 pt-20 sm:px-6 sm:pb-8 sm:pt-24 lg:overflow-visible lg:p-0">
+        {/* Telemovel e tablet: o conteudo define a altura (sem scroll interno). Desktop: sobre a capa, ao centro. */}
+        <div className={`relative z-10 flex items-center justify-center px-4 pt-28 sm:px-6 sm:pt-32 lg:absolute lg:inset-0 lg:p-0 ${isAuthenticated ? "pb-20" : "pb-10"} lg:pb-0`}>
           {isEditing ? (
             <EditProfile
               profile={profile}

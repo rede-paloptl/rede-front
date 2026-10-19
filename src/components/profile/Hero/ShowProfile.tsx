@@ -45,16 +45,20 @@ const StaticContactChip = ({
     : "border-rede-white text-rede-white";
 
   return (
-    <span className="inline-flex items-center">
-      <span className={`inline-flex aspect-square items-center justify-center rounded-full border-[1.3px] p-[14px] ${iconClassName}`}>
+    <span className="inline-flex max-w-full items-center">
+      <span className={`inline-flex aspect-square shrink-0 items-center justify-center rounded-full border-[1.3px] p-3 sm:p-[14px] ${iconClassName}`}>
         {icon}
       </span>
-      <span className={`rounded-[40px] border-[1.3px] px-6 py-3 text-btn2 font-medium ${labelClassName}`}>
+      <span className={`min-w-0 truncate rounded-[40px] border-[1.3px] px-4 py-2.5 text-btn2 font-medium sm:px-6 sm:py-3 ${labelClassName}`}>
         {children}
       </span>
     </span>
   );
 };
+
+// Contactos longos (email, site) cortam com "…" em vez de sair do ecra.
+const contactContainerClassName = "max-w-full";
+const contactLabelClassName = "min-w-0 truncate";
 
 export const ShowProfile: React.FC<ShowProfileType> = ({
   profile,
@@ -98,15 +102,16 @@ export const ShowProfile: React.FC<ShowProfileType> = ({
   };
 
   return (
-    <div className='w-full max-w-360 flex gap-5'>
-      <div className={`w-53 h-53 relative ${isAuthenticated ? "border-[1.3] border-white" : ""}`}>
+    // Telemovel: foto em cima e tudo centrado; a partir de lg, foto ao lado dos dados.
+    <div className='flex w-full max-w-360 flex-col items-center gap-5 text-center lg:flex-row lg:items-start lg:text-left'>
+      <div className={`relative size-32 shrink-0 sm:size-40 lg:size-53 ${isAuthenticated ? "border-[1.3] border-white" : ""}`}>
         {isAuthenticated && (
           <div className='absolute inset-1 z-10 flex items-center justify-center opacity-0 transition-opacity hover:opacity-100 focus-within:opacity-100'>
             <Button
               variant={"secondary"}
               disabled={isSaving}
               onClick={() => setIsAvatarCropOpen(true)}
-              className='rounded-full p-9 shrink-0 aspect-square flex items-center justify-center'
+              className='rounded-full p-5 shrink-0 aspect-square flex items-center justify-center lg:p-9'
             >
               <Camera width={12} height={12} />
               <span className="sr-only">Alterar foto</span>
@@ -115,9 +120,9 @@ export const ShowProfile: React.FC<ShowProfileType> = ({
         )}
         <Image width={212} height={212} src={profileData.imageUrl || profile?.imageUrl || placeholders.profileImageUrl} alt={displayName} className='w-full h-full object-cover' />
       </div>
-      <div className='flex flex-col'>
-        <div className='flex gap-4'>
-          <Text className={`${customBlur.className} text-[48px] leading-12 font-medium`}>{displayName}</Text>
+      <div className='flex w-full min-w-0 flex-col items-center lg:items-start'>
+        <div className='flex max-w-full items-center gap-3 lg:items-start lg:gap-4'>
+          <Text className={`${customBlur.className} min-w-0 break-words text-[32px] leading-9 font-medium sm:text-[40px] sm:leading-11 lg:text-[48px] lg:leading-12`}>{displayName}</Text>
           {isAuthenticated && (
             <Button variant="secondary" className="rounded-full p-0 shrink-0 aspect-square w-10 h-10 flex items-center justify-center" onClick={() => setIsEditing?.(!editting)}>
               <Edit2 width={12} height={12} />
@@ -125,7 +130,7 @@ export const ShowProfile: React.FC<ShowProfileType> = ({
           )}
         </div>
 
-        <Text className={`text-[20px] leading-5 font-medium mt-2.5 ${!coreSkillsLabel ? 'text-rede-white/70' : ''}`
+        <Text className={`mt-2.5 text-[16px] leading-6 font-medium lg:text-[20px] lg:leading-5 ${!coreSkillsLabel ? 'text-rede-white/70' : ''}`
         }>{coreSkillsLabel || "Competências principais"}</Text>
 
         {/* {
@@ -134,10 +139,10 @@ export const ShowProfile: React.FC<ShowProfileType> = ({
         } */}
 
         {hasContacts && (
-          <div className='w-full flex flex-wrap gap-5 mt-5'>
+          <div className='mt-5 flex w-full flex-col items-center gap-3 sm:flex-row sm:flex-wrap sm:justify-center lg:justify-start lg:gap-5'>
             {location && (
               isAuthenticated ? (
-                <Button variant={"secondary"} icon={<MapPin width={12} height={12} />} iconPosition='left'>
+                <Button variant={"secondary"} icon={<MapPin width={12} height={12} />} iconPosition='left' containerClassName={contactContainerClassName} className={contactLabelClassName}>
                   {location}
                 </Button>
               ) : (
@@ -148,11 +153,11 @@ export const ShowProfile: React.FC<ShowProfileType> = ({
             )}
             {profileData.professionalEmail && (
               isAuthenticated ? (
-                <Button variant={"secondary"} icon={<Mail width={12} height={12} />} iconPosition='left'>
+                <Button variant={"secondary"} icon={<Mail width={12} height={12} />} iconPosition='left' containerClassName={contactContainerClassName} className={contactLabelClassName}>
                   {profileData.professionalEmail}
                 </Button>
               ) : (
-                <Link href={"mailto:" + profileData.professionalEmail} target="_blank">
+                <Link href={"mailto:" + profileData.professionalEmail} target="_blank" className="max-w-full">
                   <StaticContactChip icon={<Mail width={12} height={12} />}>
                     {profileData.professionalEmail}
                   </StaticContactChip>
@@ -161,11 +166,11 @@ export const ShowProfile: React.FC<ShowProfileType> = ({
             )}
             {website && (
               isAuthenticated ? (
-                <Button variant={"secondary"} icon={<GlobeIcon width={12} height={12} />} iconPosition='left'>
+                <Button variant={"secondary"} icon={<GlobeIcon width={12} height={12} />} iconPosition='left' containerClassName={contactContainerClassName} className={contactLabelClassName}>
                   {website.replace(/^https?:\/\//, "")}
                 </Button>
               ) : (
-                <Link href={website} target="_blank">
+                <Link href={website} target="_blank" className="max-w-full">
                   <StaticContactChip icon={<GlobeIcon width={12} height={12} />}>
                     {website.replace(/^https?:\/\//, "")}
                   </StaticContactChip>
@@ -176,7 +181,7 @@ export const ShowProfile: React.FC<ShowProfileType> = ({
         )}
 
         {(profileData.professionalPhone || isAuthenticated) && (
-          <div className='w-full flex flex-wrap gap-5 mt-5'>
+          <div className='mt-3 flex w-full flex-wrap justify-center gap-3 sm:mt-5 lg:justify-start lg:gap-5'>
             {isAuthenticated ? (
               <>
                 {profileData.professionalPhone && (
