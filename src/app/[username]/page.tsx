@@ -5,7 +5,8 @@ import { TopBar } from "@/components/TopBar";
 import { VisitTracker } from "@/components/VisitTracker";
 import { AssociatedNews } from "@/components/profile/AssociatedNews";
 import { PublicProfile } from "@/components/profile/PublicProfile";
-import { SITE_NAME, SITE_URL, toMetaDescription } from "@/lib/site";
+import { SITE_URL, toMetaDescription } from "@/lib/site";
+import { ensureSiteSettings } from "@/lib/siteSettings";
 import type { User } from "@/types/User";
 import { ScrollToTop } from "./ScrollToTop";
 import {
@@ -35,7 +36,7 @@ const loadProfile = async (username: string) => {
   return getPublicProfile(normalizedUsername);
 };
 
-const buildDescription = (profile: User) => {
+const buildDescription = (profile: User, siteName: string) => {
   const displayName = getDisplayName(profile);
   const headline = getProfileHeadline(profile.profileData);
   const bio = toMetaDescription(profile.profileData?.bio);
@@ -44,8 +45,8 @@ const buildDescription = (profile: User) => {
 
   return toMetaDescription(
     headline
-      ? `${displayName} — ${headline}. Perfil profissional na ${SITE_NAME}.`
-      : `Perfil profissional de ${displayName} na ${SITE_NAME}.`,
+      ? `${displayName} — ${headline}. Perfil profissional na ${siteName}.`
+      : `Perfil profissional de ${displayName} na ${siteName}.`,
   );
 };
 
@@ -60,7 +61,8 @@ export async function generateMetadata({ params }: PublicProfilePageProps): Prom
   const displayName = getDisplayName(profile);
   const headline = getProfileHeadline(profile.profileData);
   const title = headline ? `${displayName} — ${headline}` : displayName;
-  const description = buildDescription(profile);
+  const { seo } = await ensureSiteSettings();
+  const description = buildDescription(profile, seo.siteName);
   const canonical = `/${normalizeUsername(profile.profileData?.username ?? username)}`;
   const image = getProfileImage(profile);
 
@@ -73,7 +75,7 @@ export async function generateMetadata({ params }: PublicProfilePageProps): Prom
       url: canonical,
       title,
       description,
-      siteName: SITE_NAME,
+      siteName: seo.siteName,
       locale: "pt_PT",
       images: image ? [{ url: image, alt: `Fotografia de ${displayName}` }] : undefined,
     },
@@ -87,7 +89,7 @@ export async function generateMetadata({ params }: PublicProfilePageProps): Prom
 }
 
 /** Dados estruturados (schema.org) para os motores de busca. */
-const buildJsonLd = (profile: User, username: string) => {
+const buildJsonLd = (profile: User, username: string, siteName: string) => {
   const profileData = profile.profileData;
   const url = `${SITE_URL}/${username}`;
   const country = getCountry(profileData?.country);
@@ -143,7 +145,7 @@ const buildJsonLd = (profile: User, username: string) => {
     ...(profile.createdAt ? { dateCreated: profile.createdAt } : {}),
     ...(profile.updatedAt ? { dateModified: profile.updatedAt } : {}),
     mainEntity: entity,
-    isPartOf: { "@type": "WebSite", name: SITE_NAME, url: SITE_URL },
+    isPartOf: { "@type": "WebSite", name: siteName, url: SITE_URL },
   };
 };
 
@@ -159,12 +161,13 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
   }
 
   const normalizedUsername = normalizeUsername(profile.profileData?.username ?? username);
+  const { seo } = await ensureSiteSettings();
 
   return (
     <main className="bg-rede-surface">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: serializeJsonLd(buildJsonLd(profile, normalizedUsername)) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(buildJsonLd(profile, normalizedUsername, seo.siteName)) }}
       />
       <ScrollToTop scrollKey={normalizedUsername} />
       <VisitTracker page="profile" username={normalizedUsername} />

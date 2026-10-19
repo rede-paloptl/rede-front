@@ -18,6 +18,8 @@ import { POST_AUTH_REDIRECT } from './GuestOnly';
 import { TURNSTILE_SITE_KEY, TurnstileHandle, TurnstileWidget } from './TurnstileWidget';
 import { Select } from '../ui/select';
 import { companyTypeOptions } from './data';
+import { useSiteSettings } from '@/components/contexts/SiteSettingsContext';
+import { findLinkHref } from '@/lib/siteSettings';
 
 const normalizeUsernameBase = (value: string) => {
     return value
@@ -49,6 +51,10 @@ export const Signup: React.FC = () => {
     // }
 
 
+    const { footer } = useSiteSettings();
+    // Os mesmos PDFs do rodapé (Personalizar > Rodapé > Contactos).
+    const termsHref = findLinkHref(footer.contactLinks, "terms", "/assets/termos-de-utilizacao.pdf");
+    const privacyHref = findLinkHref(footer.contactLinks, "privacy", "/assets/politica-de-privacidade.pdf");
     const [message, setMessage] = useState("");
     const [showMessaage, setShowMessaage] = useState(false);
     const [requireConfirmation, setRequireConfirmation] = useState(false);
@@ -356,9 +362,9 @@ export const Signup: React.FC = () => {
                         />
                         <Text id='termsAgreementText' as='div' className='text-[14px] leading-5 font-medium'>
                             <label htmlFor='acceptedTermsField' className='cursor-pointer'>Aceito</label>&nbsp;
-                            <Link href="/assets/termos-de-utilizacao.pdf" target='_blank' className='text-rede-yellow'>Termos de Uso</Link>
+                            <Link href={termsHref} target='_blank' className='text-rede-yellow'>Termos de Uso</Link>
                             &nbsp;e&nbsp;
-                            <Link href="/assets/politica-de-privacidade.pdf" target='_blank' className='text-rede-yellow'>Política de Privacidade</Link>
+                            <Link href={privacyHref} target='_blank' className='text-rede-yellow'>Política de Privacidade</Link>
                         </Text>
                     </div>
 

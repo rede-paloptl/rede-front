@@ -6,6 +6,10 @@ import { CustomFacebook } from "@/icons/CustomFacebook";
 import { CustomInstagram } from "@/icons/CustomInstagram";
 import { CustomYouTube } from "@/icons/CustomYouTube";
 
+import { useSiteSettings } from "@/components/contexts/SiteSettingsContext";
+import { externalLinkProps } from "@/lib/siteSettings";
+import type { SocialNetwork } from "@/types/SiteSettings";
+
 import { Button } from "./ui/button";
 import { Heading } from "./ui/heading";
 import { customBlur } from "@/app/fonts";
@@ -14,80 +18,61 @@ type FooterProps = {
   variant?: "yellow" | "red";
 };
 
-const menuItems = [
-  { label: "Sobre nós", href: "/about" },
-  { label: "REDE", href: "/network" },
-  { label: "Agência", href: "/agency" },
-  { label: "Notícias", href: "/news" },
-  { label: "Oportunidades", href: "/opportunities" },
-  { label: "Workshops", href: "/workshops" },
-  { label: "Newsletter", href: "/newsletter" },
-  { label: "Film Commission", href: "/film-commission" },
-] as const;
-
-const contactItems = [
+const socialItems: { network: SocialNetwork; label: string; icon: React.ReactNode }[] = [
   {
-    label: "redecinemapaloptl@gmail.com",
-    href: "mailto:redecinemapaloptl@gmail.com",
+    network: "facebook",
+    label: "Facebook",
+    icon: <CustomFacebook width={64} height={64} className="hover:text-black" />,
   },
   {
-    label: "+258 849517611",
-    href: "tel:+258849517611",
+    network: "instagram",
+    label: "Instagram",
+    icon: <CustomInstagram width={64} height={64} />,
   },
   {
-    label: "Termos de utilização",
-    href: "/assets/termos-de-utilizacao.pdf",
+    network: "youtube",
+    label: "YouTube",
+    icon: <CustomYouTube width={64} height={64} />,
   },
-  {
-    label: "Política de privacidade",
-    href: "/assets/politica-de-privacidade.pdf",
-  },
-] as const;
+];
 
 export const Footer: React.FC<FooterProps> = ({
   variant = "yellow",
 }) => {
+  // Links e redes sociais geridos no painel (Personalizar > Rodapé).
+  const { footer } = useSiteSettings();
+  const menuItems = footer.menuLinks.filter((item) => item.isVisible);
+  const contactItems = footer.contactLinks.filter((item) => item.isVisible);
+
   return (
     <footer className="h-auto w-full bg-rede-surface">
       <div className="mx-auto h-auto w-full max-w-360 px-4 pt-16 pb-8 sm:px-6 sm:pt-20 lg:px-8 lg:pt-28 lg:pb-10 xl:px-0">
         <div className="flex w-full flex-col gap-12 md:flex-row md:gap-6 lg:gap-0">
           <div className="flex h-full w-full flex-row justify-start gap-4 md:flex-col md:justify-center">
-            <Button
-              type="button"
-              variant="secondary"
-              size="lg"
-              aria-label="Facebook"
-              containerClassName="w-14 h-14 sm:w-16 sm:h-16 rounded-full"
-              className="h-14 w-14 cursor-pointer rounded-full border-[1.3px] border-white p-0 sm:h-16 sm:w-16"
-            >
-              <CustomFacebook
-                width={64}
-                height={64}
-                className="hover:text-black"
-              />
-            </Button>
+            {socialItems.map(({ network, label, icon }) => {
+              const href = footer.social[network];
+              const button = (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="lg"
+                  aria-label={label}
+                  containerClassName="w-14 h-14 sm:w-16 sm:h-16 rounded-full"
+                  className="h-14 w-14 cursor-pointer rounded-full border-[1.3px] border-white p-0 sm:h-16 sm:w-16"
+                >
+                  {icon}
+                </Button>
+              );
 
-            <Button
-              type="button"
-              variant="secondary"
-              size="lg"
-              aria-label="Instagram"
-              containerClassName="w-14 h-14 sm:w-16 sm:h-16 rounded-full"
-              className="h-14 w-14 cursor-pointer rounded-full border-[1.3px] border-white p-0 sm:h-16 sm:w-16"
-            >
-              <CustomInstagram width={64} height={64} />
-            </Button>
-
-            <Button
-              type="button"
-              variant="secondary"
-              size="lg"
-              aria-label="YouTube"
-              containerClassName="w-14 h-14 sm:w-16 sm:h-16 rounded-full"
-              className="h-14 w-14 cursor-pointer rounded-full border-[1.3px] border-white p-0 sm:h-16 sm:w-16"
-            >
-              <CustomYouTube width={64} height={64} />
-            </Button>
+              // Sem link no painel, o ícone fica como estava (sem destino).
+              return href ? (
+                <Link key={network} href={href} target="_blank" rel="noopener noreferrer" className="w-fit" tabIndex={-1}>
+                  {button}
+                </Link>
+              ) : (
+                <div key={network} className="w-fit">{button}</div>
+              );
+            })}
           </div>
 
           <div className="flex h-full w-full flex-col justify-center md:items-center">
@@ -102,9 +87,10 @@ export const Footer: React.FC<FooterProps> = ({
               <nav aria-label="Navegação do rodapé">
                 <ul className="text-left text-sm leading-5 font-medium text-rede-white">
                   {menuItems.map((item) => (
-                    <li key={item.href} className="mb-2.5">
+                    <li key={item.id} className="mb-2.5">
                       <Link
                         href={item.href}
+                        {...externalLinkProps(item.href)}
                         className="transition-colors hover:text-rede-yellow focus-visible:text-rede-yellow focus-visible:outline-none"
                       >
                         {item.label}
@@ -127,10 +113,11 @@ export const Footer: React.FC<FooterProps> = ({
             <address className="not-italic">
               <ul className="text-sm leading-5 font-medium text-rede-white">
                 {contactItems.map((item) => (
-                  <li key={item.href} className="mb-2.5">
+                  <li key={item.id} className="mb-2.5">
                     <Link
                       href={item.href}
                       target="_blank"
+                      rel="noopener noreferrer"
                       className="break-words transition-colors hover:text-rede-yellow focus-visible:text-rede-yellow focus-visible:outline-none"
                     >
                       {item.label}

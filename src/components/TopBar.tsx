@@ -16,25 +16,21 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+import { useSiteSettings } from "@/components/contexts/SiteSettingsContext";
 import { useAuth } from "@/hooks/useAuth";
+import { externalLinkProps } from "@/lib/siteSettings";
 import { cn } from "@/lib/utils";
 
 import CustomImage from "./CustomImage";
 import { Button } from "./ui/button";
 
-const menuItems = [
-  { label: "Sobre nós", href: "/about" },
-  { label: "REDE", href: "/network" },
-  { label: "Agência", href: "/agency" },
-  { label: "Notícias", href: "/news" },
-  { label: "Oportunidades", href: "/opportunities" },
-  { label: "Newsletter", href: "/newsletter" },
-  { label: "Film Commission", href: "/film-commission" },
-] as const;
-
 export const TopBar: React.FC = () => {
   const { user, signOut } = useAuth();
   const pathname = usePathname();
+  const { topbar, placeholders } = useSiteSettings();
+
+  // Links e logótipo geridos no painel (Personalizar > Menu do topo).
+  const menuItems = topbar.links.filter((item) => item.isVisible);
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -107,7 +103,7 @@ export const TopBar: React.FC = () => {
           className="h-16 w-32 shrink-0 sm:w-40"
         >
           <Image
-            src="/assets/logo-small.png"
+            src={topbar.logoUrl}
             alt="Logótipo da REDE"
             width={183}
             height={64}
@@ -119,8 +115,8 @@ export const TopBar: React.FC = () => {
         <nav aria-label="Navegação principal" className="hidden xl:block">
           <ul className="flex items-center gap-1 text-rede-white">
             {menuItems.map((item) => (
-              <li key={item.href}>
-                <Link href={item.href}>
+              <li key={item.id}>
+                <Link href={item.href} {...externalLinkProps(item.href)}>
                   <Button
                     isActive={isActiveRoute(item.href)}
                     variant="secondary"
@@ -148,7 +144,7 @@ export const TopBar: React.FC = () => {
               >
                 <CustomImage
                   src={avatarUrl}
-                  fallbackSrc="/assets/avatar.png"
+                  fallbackSrc={placeholders.avatarUrl}
                   alt={`Fotografia de perfil de ${user.name}`}
                   height={40}
                   width={40}
@@ -238,7 +234,7 @@ export const TopBar: React.FC = () => {
           {user && (
             <CustomImage
               src={avatarUrl}
-              fallbackSrc="/assets/avatar.png"
+              fallbackSrc={placeholders.avatarUrl}
               alt={`Fotografia de perfil de ${user.name}`}
               height={36}
               width={36}
@@ -284,7 +280,7 @@ export const TopBar: React.FC = () => {
             <div className="mb-6 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
               <CustomImage
                 src={avatarUrl}
-                fallbackSrc="/assets/avatar.png"
+                fallbackSrc={placeholders.avatarUrl}
                 alt={`Fotografia de perfil de ${user.name}`}
                 height={48}
                 width={48}
@@ -310,9 +306,10 @@ export const TopBar: React.FC = () => {
               const active = isActiveRoute(item.href);
 
               return (
-                <li key={item.href} className="border-b border-white/10">
+                <li key={item.id} className="border-b border-white/10">
                   <Link
                     href={item.href}
+                    {...externalLinkProps(item.href)}
                     aria-current={active ? "page" : undefined}
                     className={cn(
                       "flex min-h-13 items-center rounded-lg px-3 py-3 text-base font-medium transition-colors",

@@ -14,14 +14,7 @@ export default function FilmCommissionPage() {
     return (
         <main className="bg-rede-bg">
             <TopBar />
-            <Hero
-                imageUrl="/assets/film-commission/hero.jpg"
-                title="Film Commission"
-                description={`
-                        Estamos a estudar como pode funcionar um modelo de Film Commission nos PALOP e em Timor-Leste — e a preparar, 
-                        entretanto, as ferramentas práticas de que o setor precisa.
-                    `}
-            />
+            <Hero page="film-commission" />
             <WhatWeAreDoing />
             <WhereWeAre />
             <WhatItComprises />

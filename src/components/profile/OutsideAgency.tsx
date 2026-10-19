@@ -12,8 +12,10 @@ import { AddFilmModal, FilmFormData, toFilmFormData, toProfileFilm } from "../Ad
 import type { ProfileTypeSource } from "../network/data";
 
 import { FilmDetailsModal } from "./FilmDetailsModal";
+import { LEGACY_FILM_PLACEHOLDER } from "@/lib/siteSettings";
 
-const FILM_PLACEHOLDER_COVER = "/assets/placeholder-img.jpg";
+// Gravado como capa de um filme sem imagem; ao mostrar, vale a do painel.
+const FILM_PLACEHOLDER_COVER = LEGACY_FILM_PLACEHOLDER;
 
 type LocalFilmCardProps = {
   film: FilmCardType;

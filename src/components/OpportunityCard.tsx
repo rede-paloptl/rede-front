@@ -9,6 +9,7 @@ import { Text } from "./ui/text";
 import Card from "./ui/card";
 import { Tag } from "./ui/tag";
 import { getOpportunityTagHref } from "./opportunities/useOpportunityFilters";
+import { useSiteSettings } from "@/components/contexts/SiteSettingsContext";
 
 export type OpportunityType = {
   id: string;
@@ -30,11 +31,12 @@ export type OpportunityType = {
 }
 
 export const OpportunityCard: React.FC<{ opportunityData: OpportunityType }> = ({ opportunityData }) => {
+  const { placeholders } = useSiteSettings();
   return (
     <Card
       image={
         <Link href={"/opportunity-details?id=" + opportunityData.id} className="cursor-pointer">
-          <img src={opportunityData.cover || "/assets/opportunities/hero.jpg"} className="w-full h-full object-cover" alt="Diretora no set de filmagem" />
+          <img src={opportunityData.cover || placeholders.opportunityImageUrl} className="w-full h-full object-cover" alt="Diretora no set de filmagem" />
         </Link>
       }
       footer={

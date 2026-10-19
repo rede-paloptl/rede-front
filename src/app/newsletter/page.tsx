@@ -8,10 +8,7 @@ export default function NewsletterPage() {
     return (
         <main className="bg-rede-bg">
             <TopBar />
-            <Hero
-                imageUrl="/assets/newsletter/hero.png"
-                title="Newsletters"
-                description="Acesse todas as edições da nossa newsletter" />
+            <Hero page="newsletter" />
             <SectionNewsletters />
             <Footer />
         </main>

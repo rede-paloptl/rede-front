@@ -5,8 +5,6 @@ import { ProfileType } from '../ProfileCard'
 import { getProfileTypeId } from './data'
 import { normalizeCountryValue, normalizeLabelKey } from './filters'
 
-const fallbackProfileImage = '/assets/profile/profile.png'
-
 // O perfil guarda ids das listas geridas em Configuracoes (registos antigos
 // podem ter o nome). Os filtros comparam ids; a pesquisa livre e as tags usam
 // os nomes.
@@ -112,7 +110,8 @@ export const toProfileCardData = (user: NetworkUser, index: number): ProfileType
     title: getProfileTitle(user),
     tags: buildTags(user),
     bio: profileData?.bio,
-    cover: profileData?.imageUrl || user.imageUrl || fallbackProfileImage,
+    // Vazio: o ProfileCard mostra a foto por omissão do painel.
+    cover: profileData?.imageUrl || user.imageUrl || '',
     country,
     province,
     city,

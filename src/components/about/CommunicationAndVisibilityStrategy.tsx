@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import { Eye } from "lucide-react";
 import { customBlur } from "@/app/fonts";
@@ -5,8 +7,10 @@ import { Text } from "../ui/text";
 import { Heading } from "../ui/heading";
 import { Button } from "../ui/button";
 import Link from "next/link";
+import { useSiteSettings } from "@/components/contexts/SiteSettingsContext";
 
 export const CommunicationAndVisibilityStrategy: React.FC = () => {
+  const { about } = useSiteSettings();
   return (
     <section className="h-auto w-full bg-rede-bg">
       <div className="relative mx-auto flex h-auto min-h-30 w-full max-w-6xl flex-col gap-12 px-4 py-14 sm:px-6 sm:py-16 lg:flex-row lg:gap-0 lg:px-0 lg:pb-20 lg:pt-20">
@@ -36,7 +40,7 @@ export const CommunicationAndVisibilityStrategy: React.FC = () => {
           </Text>
 
 
-          <Link href={"/assets/Estratégia_C&V_SITE.pdf"} target="_blank">
+          <Link href={about.strategyPdfUrl} target="_blank" rel="noopener noreferrer">
             <Button
               className="w-full sm:max-w-[200px]"
               variant="primary"

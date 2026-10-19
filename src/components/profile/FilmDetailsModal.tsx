@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { Tag } from "@/components/ui/tag";
 import { Text } from "@/components/ui/text";
+import { useSiteSettings } from "@/components/contexts/SiteSettingsContext";
+import { filmCoverOrPlaceholder } from "@/lib/siteSettings";
 
 type FilmDetailsModalProps = {
   film: ProfileFilm | null;
@@ -21,6 +23,7 @@ type FilmDetailsModalProps = {
  * exibicoes associados. Segue o mesmo modal lateral da equipa (TeamSection).
  */
 export const FilmDetailsModal: React.FC<FilmDetailsModalProps> = ({ film, achievements = [], onClose }) => {
+  const { placeholders } = useSiteSettings();
   const relatedAchievements = film
     ? achievements.filter((entry) => entry.filmId === film.id)
     : [];
@@ -43,7 +46,7 @@ export const FilmDetailsModal: React.FC<FilmDetailsModalProps> = ({ film, achiev
 
           <div className="h-[260px] w-full overflow-hidden bg-rede-bg-600 sm:h-[320px]">
             <img
-              src={film.cover || "/assets/placeholder-img.jpg"}
+              src={filmCoverOrPlaceholder(film.cover, placeholders.filmCoverUrl)}
               alt={`Capa de ${film.title}`}
               className="h-full w-full object-cover"
             />

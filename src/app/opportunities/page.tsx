@@ -10,11 +10,7 @@ export default function OpportunitiesPage() {
   return (
     <main className="bg-rede-bg">
       <TopBar />
-      <Hero
-        imageUrl="/assets/opportunities/hero.jpg"
-        title="Oportunidades"
-        description="Oportunidades que transformam ideias em projetos sustentáveis."
-      />
+      <Hero page="opportunities" />
       <Opportunities />
       <Footer />
     </main>

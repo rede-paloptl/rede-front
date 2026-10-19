@@ -9,6 +9,7 @@ import { Tag } from "./ui/tag";
 import { getNetworkTagHref } from "./network/FilterSidebar";
 import { Text } from "./ui/text";
 import Link from "next/link";
+import { useSiteSettings } from "@/components/contexts/SiteSettingsContext";
 
 export type ProfileType = {
   id: string;
@@ -29,13 +30,14 @@ export type ProfileType = {
 }
 
 export const ProfileCard: React.FC<{ profileData: ProfileType }> = ({ profileData }) => {
+  const { placeholders } = useSiteSettings();
   const router = useRouter();
 
   return (
     <Card
       image={
         <Link href={`/${profileData?.username}`} className="cursor-pointer">
-          <img src={profileData.cover} className="w-full h-full object-cover" alt="Diretora no set de filmagem" />
+          <img src={profileData.cover || placeholders.profileImageUrl} className="w-full h-full object-cover" alt="Diretora no set de filmagem" />
         </Link>
       }
       footer={

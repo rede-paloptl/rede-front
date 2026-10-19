@@ -1,24 +1,36 @@
 'use client'
 
 import { customBlur } from '@/app/fonts'
+import { useSiteSettings } from '@/components/contexts/SiteSettingsContext'
 import { Heading } from '@/components/ui/heading'
 import { Text } from '@/components/ui/text'
+import type { HeroPage } from '@/types/SiteSettings'
 
 type HeroProps = {
+  /** Página cujo destaque (imagem, título, descrição) vem do painel (Personalizar > Destaques). */
+  page?: HeroPage
+  /** Sobrepõem-se ao painel (ex: a capa de uma notícia). */
   title?: string
   description?: string
   imageUrl?: string
 }
 
-export const Hero: React.FC<HeroProps> = ({ title, description, imageUrl }) => {
+export const Hero: React.FC<HeroProps> = ({ page, ...props }) => {
+  const { heroes } = useSiteSettings()
+  const content = page ? heroes.pages[page] : undefined
+
+  const title = props.title ?? content?.title
+  const description = props.description ?? content?.description
+  // Sem imagem própria (ex: notícia sem capa) usa a imagem por omissão do painel.
+  const imageUrl = props.imageUrl || content?.imageUrl || heroes.fallbackImageUrl
   const hasContent = Boolean(title || description)
 
   return (
     <section className="h-auto w-full pt-17">
       <div className="relative mx-auto h-[calc(100vh-65px)] w-full max-w-[1920px] overflow-hidden">
         <img
-          src={imageUrl || "/assets/opportunities/hero.jpg"}
-          alt="Imagem de destaque das oportunidades"
+          src={imageUrl}
+          alt={title ? `Imagem de destaque: ${title}` : 'Imagem de destaque'}
           className="h-full w-full object-cover"
         />
 

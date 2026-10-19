@@ -3,6 +3,7 @@ import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Signup } from "@/components/Auth/Signup";
+import { AuthBackground } from "@/components/Auth/AuthBackground";
 
 const InformationBox: React.FC = () => {
     return (
@@ -28,10 +29,10 @@ export default function SignupPage() {
         <GuestOnly>
             {/* O scroll fica neste contentor, com o espaço da barra reservado dos dois lados:
                 ao trocar o tipo de perfil o form cresce, mas não salta nem sai do centro. */}
-            <div className="w-full h-dvh bg-[url('/assets/signup/signup.png')] bg-cover bg-center flex justify-center items-start overflow-y-auto [scrollbar-gutter:stable_both-edges] pt-28 pb-10">
+            <AuthBackground variant="signup" className="w-full h-dvh flex justify-center items-start overflow-y-auto [scrollbar-gutter:stable_both-edges] pt-28 pb-10">
                 <Signup />
                 {/* <InformationBox /> */}
-            </div >
+            </AuthBackground>
         </GuestOnly>
     )
 }
