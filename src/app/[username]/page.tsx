@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Footer from "@/components/Footer";
@@ -6,7 +5,9 @@ import { TopBar } from "@/components/TopBar";
 import { VisitTracker } from "@/components/VisitTracker";
 import { AssociatedNews } from "@/components/profile/AssociatedNews";
 import { PublicProfile } from "@/components/profile/PublicProfile";
-import { SITE_NAME, SITE_URL, toMetaDescription } from "@/lib/site";
+import { ogImagePath, ogImages } from "@/lib/ogImage";
+import { SITE_URL, toMetaDescription } from "@/lib/site";
+import { ensureSiteSettings } from "@/lib/siteSettings";
 import type { User } from "@/types/User";
 import { ScrollToTop } from "./ScrollToTop";
 import {
@@ -36,7 +37,7 @@ const loadProfile = async (username: string) => {
   return getPublicProfile(normalizedUsername);
 };
 
-const buildDescription = (profile: User) => {
+const buildDescription = (profile: User, siteName: string) => {
   const displayName = getDisplayName(profile);
   const headline = getProfileHeadline(profile.profileData);
   const bio = toMetaDescription(profile.profileData?.bio);
@@ -45,8 +46,8 @@ const buildDescription = (profile: User) => {
 
   return toMetaDescription(
     headline
-      ? `${displayName} — ${headline}. Perfil profissional na ${SITE_NAME}.`
-      : `Perfil profissional de ${displayName} na ${SITE_NAME}.`,
+      ? `${displayName} — ${headline}. Perfil profissional na ${siteName}.`
+      : `Perfil profissional de ${displayName} na ${siteName}.`,
   );
 };
 
@@ -61,14 +62,11 @@ export async function generateMetadata({ params }: PublicProfilePageProps): Prom
   const displayName = getDisplayName(profile);
   const headline = getProfileHeadline(profile.profileData);
   const title = headline ? `${displayName} — ${headline}` : displayName;
-  const description = buildDescription(profile);
+  const { seo, placeholders } = await ensureSiteSettings();
+  const description = buildDescription(profile, seo.siteName);
   const canonical = `/${normalizeUsername(profile.profileData?.username ?? username)}`;
-  const sourceImage = getProfileImage(profile);
   // JPEG reduzido (og-image.jpg/route.ts): o WhatsApp nao mostra imagens grandes.
-  // O ?v= muda com a foto, para os crawlers nao reutilizarem a antiga.
-  const image = sourceImage
-    ? `${canonical}/og-image.jpg?v=${createHash("sha1").update(sourceImage).digest("hex").slice(0, 10)}`
-    : undefined;
+  const image = ogImagePath(`${canonical}/og-image.jpg`, getProfileImage(profile) ?? placeholders.profileImageUrl);
 
   return {
     title,
@@ -79,9 +77,9 @@ export async function generateMetadata({ params }: PublicProfilePageProps): Prom
       url: canonical,
       title,
       description,
-      siteName: SITE_NAME,
+      siteName: seo.siteName,
       locale: "pt_PT",
-      images: image ? [{ url: image, type: "image/jpeg", alt: `Fotografia de ${displayName}` }] : undefined,
+      images: ogImages(image, `Fotografia de ${displayName}`, "square"),
     },
     twitter: {
       card: image ? "summary_large_image" : "summary",
@@ -93,7 +91,7 @@ export async function generateMetadata({ params }: PublicProfilePageProps): Prom
 }
 
 /** Dados estruturados (schema.org) para os motores de busca. */
-const buildJsonLd = (profile: User, username: string) => {
+const buildJsonLd = (profile: User, username: string, siteName: string) => {
   const profileData = profile.profileData;
   const url = `${SITE_URL}/${username}`;
   const country = getCountry(profileData?.country);
@@ -149,7 +147,7 @@ const buildJsonLd = (profile: User, username: string) => {
     ...(profile.createdAt ? { dateCreated: profile.createdAt } : {}),
     ...(profile.updatedAt ? { dateModified: profile.updatedAt } : {}),
     mainEntity: entity,
-    isPartOf: { "@type": "WebSite", name: SITE_NAME, url: SITE_URL },
+    isPartOf: { "@type": "WebSite", name: siteName, url: SITE_URL },
   };
 };
 
@@ -165,12 +163,13 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
   }
 
   const normalizedUsername = normalizeUsername(profile.profileData?.username ?? username);
+  const { seo } = await ensureSiteSettings();
 
   return (
     <main className="bg-rede-surface">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: serializeJsonLd(buildJsonLd(profile, normalizedUsername)) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(buildJsonLd(profile, normalizedUsername, seo.siteName)) }}
       />
       <ScrollToTop scrollKey={normalizedUsername} />
       <VisitTracker page="profile" username={normalizedUsername} />

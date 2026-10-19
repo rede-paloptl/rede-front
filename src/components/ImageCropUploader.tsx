@@ -19,6 +19,10 @@ type ImageCropUploaderProps = {
   minHeight?: number;
   emptyLabel?: string;
   helperText?: string;
+  /** Limite da imagem original, em MB. */
+  maxSizeMB?: number;
+  /** Formato, resolucao e proporcao recomendados, mostrados por baixo da imagem. */
+  formatHint?: string;
   uploadLabel?: string;
   uploadingLabel?: string;
   disabled?: boolean;
@@ -34,7 +38,6 @@ const OUTPUT_TYPE = "image/jpeg";
 // A original so e lida pelo browser, por isso pode ser grande (fotos de
 // telemovel tem 3-8MB).
 export const MAX_IMAGE_SIZE_MB = 15;
-const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
 
 // Alvo do ficheiro enviado. A qualidade desce aos poucos ate caber; a API
 // continua a recusar acima de 2MB (rede-back, MAX_UPLOAD_SIZE_MB).
@@ -117,6 +120,8 @@ export const ImageCropUploader: React.FC<ImageCropUploaderProps> = ({
   minHeight = 252,
   emptyLabel = "Clique para escolher uma imagem",
   helperText = "Arraste para reposicionar e ajuste o zoom antes de guardar.",
+  maxSizeMB = MAX_IMAGE_SIZE_MB,
+  formatHint,
   uploadLabel = "Guardar imagem",
   uploadingLabel = "A enviar...",
   disabled = false,
@@ -152,8 +157,8 @@ export const ImageCropUploader: React.FC<ImageCropUploaderProps> = ({
       return;
     }
 
-    if (file.size > MAX_IMAGE_SIZE_BYTES) {
-      onError?.(`A imagem tem ${(file.size / (1024 * 1024)).toFixed(1)} MB. O tamanho máximo é ${MAX_IMAGE_SIZE_MB} MB.`);
+    if (file.size > maxSizeMB * 1024 * 1024) {
+      onError?.(`A imagem tem ${(file.size / (1024 * 1024)).toFixed(1)} MB. O tamanho máximo é ${maxSizeMB} MB.`);
       return;
     }
 
@@ -286,7 +291,7 @@ export const ImageCropUploader: React.FC<ImageCropUploaderProps> = ({
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Text className="text-[12px] leading-4 text-rede-white/50">
-          Tamanho máximo: {MAX_IMAGE_SIZE_MB} MB
+          {formatHint ?? `Tamanho máximo: ${maxSizeMB} MB`}
         </Text>
 
         <div className="flex flex-wrap justify-end gap-2">

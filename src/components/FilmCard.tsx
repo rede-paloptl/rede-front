@@ -8,6 +8,8 @@ import Card from "./ui/card";
 import { Tag } from "./ui/tag";
 import { getFilmTagLabel } from "./network/data";
 import { openExternalUrl, toExternalUrl } from "@/lib/utils";
+import { useSiteSettings } from "@/components/contexts/SiteSettingsContext";
+import { filmCoverOrPlaceholder } from "@/lib/siteSettings";
 
 export type FilmCardType = {
   id: string;
@@ -31,12 +33,13 @@ type FilmCardProps = {
 };
 
 export const FilmCard: React.FC<FilmCardProps> = ({ filmData, v, tagsAsText = false }) => {
+  const { placeholders } = useSiteSettings();
   const hasLink = Boolean(toExternalUrl(filmData.link));
 
   return (
     <Card image={
       <img
-        src={filmData.cover}
+        src={filmCoverOrPlaceholder(filmData.cover, placeholders.filmCoverUrl)}
         className="w-full h-full object-cover" alt={`Capa de ${filmData.title}`} />
     }
       footer={

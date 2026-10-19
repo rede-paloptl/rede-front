@@ -7,9 +7,11 @@ import { customBlur } from "@/app/fonts";
 import { Button } from "@/components/ui/button";
 import { Heading } from "@/components/ui/heading";
 import { Input } from "@/components/ui/Input";
+import { useSiteSettings } from "@/components/contexts/SiteSettingsContext";
 
 export const Newsletter: React.FC = () => {
   const [email, setEmail] = useState("");
+  const { home } = useSiteSettings();
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -27,7 +29,7 @@ export const Newsletter: React.FC = () => {
     <section className="w-full bg-rede-bg">
       <div className="relative mx-auto min-h-[420px] w-full max-w-[1920px] overflow-hidden sm:min-h-[480px] lg:min-h-[520px]">
         <Image
-          src="/assets/home/hero-3.png"
+          src={home.newsletterImageUrl}
           alt=""
           fill
           sizes="100vw"

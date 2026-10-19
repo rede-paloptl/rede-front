@@ -12,6 +12,7 @@ import { getCountryLabel } from "@/components/network/filters"
 import { getTaxonomy } from "@/lib/taxonomy"
 import { toSkillLabel } from "../Bio/SectionEditSkills"
 import { EditDataModal } from "./EditDataModal"
+import { useSiteSettings } from "@/components/contexts/SiteSettingsContext";
 
 type ProfileData = User["profileData"];
 
@@ -65,6 +66,7 @@ export const ShowProfile: React.FC<ShowProfileType> = ({
   onSaveProfileData,
   onImageUploadError,
 }) => {
+  const { placeholders } = useSiteSettings();
   const [isAvatarCropOpen, setIsAvatarCropOpen] = useState(false);
   const [isDataModalOpen, setIsDataModalOpen] = useState(false);
 
@@ -111,7 +113,7 @@ export const ShowProfile: React.FC<ShowProfileType> = ({
             </Button>
           </div>
         )}
-        <Image width={212} height={212} src={profileData.imageUrl || profile?.imageUrl || "/assets/profile/profile.png"} alt={displayName} className='w-full h-full object-cover' />
+        <Image width={212} height={212} src={profileData.imageUrl || profile?.imageUrl || placeholders.profileImageUrl} alt={displayName} className='w-full h-full object-cover' />
       </div>
       <div className='flex flex-col'>
         <div className='flex gap-4'>

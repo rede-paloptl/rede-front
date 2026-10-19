@@ -13,9 +13,11 @@ import type { GoogleSignInResult } from '@/lib/googleAuth';
 import { GoogleSignInButton } from './Auth/GoogleSignInButton';
 import { TURNSTILE_SITE_KEY, TurnstileHandle, TurnstileWidget } from './Auth/TurnstileWidget';
 import { SESSION_EXPIRED_MESSAGE } from '@/actions/constants';
+import { useSiteSettings } from "@/components/contexts/SiteSettingsContext";
 
 
 export const Login: React.FC = () => {
+    const { auth } = useSiteSettings();
     const [message, setMessage] = useState("");
     const { signInUsingEmailAndPassword, signInUsingGoogle } = useAuth();
     const [isError, setIsError] = useState(false);
@@ -108,16 +110,13 @@ export const Login: React.FC = () => {
                 return;
             }
 
+            // Quem encaminha e o GuestOnly da pagina (para o perfil), assim que a
+            // sessao existe. Um redirect proprio aqui disparava 3s depois e
+            // levava o utilizador para a home.
             if (responseData?.user) {
                 setIsError(false);
                 setShowMessaage(true);
                 setMessage("Sessão iniciada com sucesso! A redirecionar...");
-
-                setTimeout(() => {
-                    setShowMessaage(false);
-                    setMessage("");
-                    window.location.href = "/"
-                }, 3000);
             }
 
         } catch {
@@ -168,12 +167,6 @@ export const Login: React.FC = () => {
                 setIsError(false);
                 setShowMessaage(true);
                 setMessage("Sessão iniciada com sucesso! A redirecionar...");
-
-                setTimeout(() => {
-                    setShowMessaage(false);
-                    setMessage("");
-                    window.location.href = "/"
-                }, 3000);
             }
         } catch (err) {
             setIsError(true);
@@ -190,7 +183,10 @@ export const Login: React.FC = () => {
     }
 
     return (
-        <div className="w-full h-screen bg-[url('/assets/login/login.png')] bg-cover bg-center flex items-center justify-center">
+        <div
+            className="w-full h-screen bg-cover bg-center flex items-center justify-center"
+            style={{ backgroundImage: `url("${auth.loginImageUrl}")` }}
+        >
             <div className="w-md hh-173.25 bg-rede-surface p-6">
                 <div className="w-full h-auto flex flex-col items-center gap-6">
                     <Heading className={`text-rede-white ${customBlur.className} text-[48px] leading-14`}>Login</Heading>

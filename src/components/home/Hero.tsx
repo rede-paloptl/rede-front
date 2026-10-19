@@ -9,39 +9,21 @@ import { Heading } from "@/components/ui/heading";
 import { Text } from "@/components/ui/text";
 import { ArrowRight } from "lucide-react";
 
-const heroItems = [
+import { useSiteSettings } from "@/components/contexts/SiteSettingsContext";
+import { externalLinkProps } from "@/lib/siteSettings";
+
+// Cores de cada cartão, pela ordem: o primeiro amarelo, o segundo vermelho.
+// Textos, imagens e links vêm do painel (Personalizar > Página inicial).
+const cardStyles = [
   {
-    title: "REDE",
-    image: "/assets/home/hero-1.png",
-    imageAlt:
-      "Profissionais da REDE de Cinema e Audiovisual PALOP e Timor-Leste",
     titleClassName: "text-rede-yellow",
-    description:
-      "Encontra, conecta-te e colabora com profissionais dos PALOP, enquanto aumentas a tua presença na rede — AQUI.",
-    // Estado de hover
-    hoverTitle: "Explorar a Rede",
     panelClassName: "bg-rede-yellow",
     hoverContentClassName: "text-rede-surface",
-    href: "/network",
-    ctaLabel: "Ver a Rede",
-    ctaClassName:
-      "border-[1.3px] border-rede-surface bg-transparent text-rede-surface hover:border-transparent hover:bg-rede-surface hover:text-rede-yellow active:border-transparent active:bg-rede-surface active:text-rede-yellow",
   },
   {
-    title: "Agência",
-    image: "/assets/home/hero-2.jpeg",
-    imageAlt: "Profissionais da Agência de Cinema e Audiovisual",
     titleClassName: "text-rede-red",
-    description:
-      "Faz o teu trabalho chegar mais longe, junto de quem o pode projetar e partilhar — AQUI.",
-    // Estado de hover
-    hoverTitle: "Explorar a Agência",
     panelClassName: "bg-rede-red",
     hoverContentClassName: "text-rede-white",
-    href: "/agency",
-    ctaLabel: "Ver a Agência",
-    ctaClassName:
-      "border-[1.3px] border-rede-white bg-transparent text-rede-white hover:border-transparent hover:bg-rede-white hover:text-rede-red active:border-transparent active:bg-rede-white active:text-rede-red",
   },
 ] as const;
 
@@ -60,6 +42,12 @@ const hideOnHover =
   "opacity-100 transition-opacity group-hover:opacity-0 group-focus-within:opacity-0";
 
 export const Hero: React.FC = () => {
+  const { home } = useSiteSettings();
+  const heroItems = home.cards.map((card, index) => ({
+    ...card,
+    ...cardStyles[index % cardStyles.length],
+  }));
+
   return (
     <section className="w-full pt-16">
       <div className="mx-auto grid w-full max-w-[1920px] grid-cols-1 md:grid-cols-2">
@@ -69,11 +57,11 @@ export const Hero: React.FC = () => {
 
           return (
             <article
-              key={item.title}
+              key={item.id}
               className="group relative min-h-[420px] overflow-hidden sm:min-h-[500px] md:min-h-[560px] lg:min-h-[620px]"
             >
               <Image
-                src={item.image}
+                src={item.imageUrl}
                 alt={item.imageAlt}
                 fill
                 priority
@@ -115,13 +103,14 @@ export const Hero: React.FC = () => {
 
                 <Link
                   href={item.href}
+                  {...externalLinkProps(item.href)}
                   className={`pointer-events-none ${reveal} ${motion} group-hover:pointer-events-auto group-focus-within:pointer-events-auto no-hover:pointer-events-auto`}
                 >
                   <Button
                     type="button"
                     variant="secondary"
                     size="lg"
-                    aria-label="YouTube"
+                    aria-label={item.hoverTitle}
                     containerClassName="w-14 h-14 sm:w-16 sm:h-16 rounded-full"
                     className="h-14 w-14 cursor-pointer rounded-full border-[1.3px] border-white p-0 sm:h-16 sm:w-16"
                   >

@@ -1,3 +1,4 @@
+import { heroPageMetadata } from "@/lib/seo";
 import { Hero } from "@/components/Hero";
 import { WhatItComprises } from "@/components/film-commission/WhatItComprises";
 import { ScreenCommission } from "@/components/film-commission/ScreenCommission";
@@ -10,18 +11,14 @@ import { WhatWeAreDoing } from "@/components/film-commission/WhatWeAreDoing";
 import { WhereWeAre } from "@/components/film-commission/WhereWeAre";
 import { GoForWork } from "@/components/film-commission/GoForWork";
 
+// Titulo, texto e imagem do destaque (Personalizar > Destaques das paginas).
+export const generateMetadata = () => heroPageMetadata("film-commission", "/film-commission");
+
 export default function FilmCommissionPage() {
     return (
         <main className="bg-rede-bg">
             <TopBar />
-            <Hero
-                imageUrl="/assets/film-commission/hero.jpg"
-                title="Film Commission"
-                description={`
-                        Estamos a estudar como pode funcionar um modelo de Film Commission nos PALOP e em Timor-Leste — e a preparar, 
-                        entretanto, as ferramentas práticas de que o setor precisa.
-                    `}
-            />
+            <Hero page="film-commission" />
             <WhatWeAreDoing />
             <WhereWeAre />
             <WhatItComprises />

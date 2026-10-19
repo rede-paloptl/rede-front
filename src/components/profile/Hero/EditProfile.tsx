@@ -18,6 +18,7 @@ import { Film, GlobeIcon, Mail, MonitorPlay, Music2, PhoneIcon, X } from "lucide
 import Facebook from "@/icons/Facebook"
 import Instagram from "@/icons/Instagram"
 import Linkedin from "@/icons/Linkedin"
+import { useSiteSettings } from "@/components/contexts/SiteSettingsContext";
 
 type ProfileData = User["profileData"];
 
@@ -140,6 +141,7 @@ export const EditProfile: React.FC<EditProfileType> = ({
   onSave,
   onSaveProfileData
 }) => {
+  const { placeholders } = useSiteSettings();
   // Competencias guardam ids das listas (registos antigos podem ter o nome).
   const initialCoreSkills = uniqueSkills((profileData.coreSkills ?? []).map(toSkillId)).slice(0, 3);
 
@@ -223,7 +225,7 @@ export const EditProfile: React.FC<EditProfileType> = ({
         <Image
           width={212}
           height={212}
-          src={profileData.imageUrl || profile?.imageUrl || "/assets/profile/profile.png"}
+          src={profileData.imageUrl || profile?.imageUrl || placeholders.profileImageUrl}
           alt={profile?.name || 'Perfil'}
           className='w-full h-full object-cover'
         />

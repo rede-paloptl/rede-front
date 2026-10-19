@@ -1,10 +1,7 @@
 /** Endereco canonico do site, usado em metadados, sitemap e links partilhados. */
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://redecinemapaloptl.org").replace(/\/+$/, "");
 
-export const SITE_NAME = "Rede Cinema PALOP-TL";
-
-export const SITE_DESCRIPTION =
-  "Plataforma da rede de cinema e audiovisual dos países africanos de língua oficial portuguesa e Timor-Leste: profissionais, notícias, oportunidades e agência.";
+// Nome e descricao do site: Personalizar > SEO no painel (ver lib/siteSettings.ts).
 
 /** Texto simples com no maximo `max` caracteres, cortado numa palavra. */
 export const toMetaDescription = (value: string | undefined | null, max = 160) => {

@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import { Eye } from "lucide-react";
 import { customBlur } from "@/app/fonts";
@@ -5,8 +7,10 @@ import { Text } from "../ui/text";
 import { Heading } from "../ui/heading";
 import { Button } from "../ui/button";
 import Link from "next/link";
+import { useSiteSettings } from "@/components/contexts/SiteSettingsContext";
 
 export const GovernanceFrameworkSection: React.FC = () => {
+  const { about } = useSiteSettings();
   return (
     <section className="h-auto w-full bg-rede-surface">
       <div className="relative mx-auto flex h-auto min-h-30 w-full max-w-6xl flex-col gap-12 px-4 py-14 sm:px-6 sm:py-16 lg:flex-row lg:gap-0 lg:px-0 lg:pb-20 lg:pt-20">
@@ -63,7 +67,7 @@ export const GovernanceFrameworkSection: React.FC = () => {
             orientam a sua presença digital.
           </Text>
 
-          <Link href={"/assets/governação_digital_V0_19-07-26_terms.pdf"} target="_blank">
+          <Link href={about.governancePdfUrl} target="_blank" rel="noopener noreferrer">
             <Button
               className="w-full sm:max-w-[200px]"
               variant="primary"

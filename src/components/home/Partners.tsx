@@ -2,6 +2,9 @@
 
 import Image from "next/image";
 
+import { useSiteSettings } from "@/components/contexts/SiteSettingsContext";
+import type { PartnerGroup as PartnerGroupSettings, PartnerLogo } from "@/types/SiteSettings";
+
 import { Text } from "../ui/text";
 
 const LOGO_SIZE = {
@@ -17,29 +20,6 @@ type Logo = {
   className?: string;
 };
 
-/** Zona de um PNG que tem conteúdo, em píxeis da imagem original. */
-type Crop = { x: number; y: number; width: number; height: number };
-
-type WordmarkPart = {
-  src: string;
-  /** Tamanho real do PNG. */
-  imageWidth: number;
-  imageHeight: number;
-  crop: Crop;
-};
-
-/**
- * Um logótipo que chega em vários PNG que se completam (ex: "PALOP-TL" + "UE").
- * Cada parte é recortada à zona com conteúdo e as partes ficam lado a lado
- * numa só caixa, alinhadas pela mesma linha de base.
- */
-type Wordmark = {
-  alt: string;
-  parts: WordmarkPart[];
-};
-
-type PartnerLogo = Logo | Wordmark;
-
 type PartnerGroupData = {
   title: string;
   align?: "left" | "right";
@@ -47,135 +27,33 @@ type PartnerGroupData = {
 };
 
 type PartnerRow = {
-  left: PartnerGroupData;
+  id: string;
+  left?: PartnerGroupData;
   right?: PartnerGroupData;
 };
 
-const PARTNER_ROWS: PartnerRow[] = [
-  {
-    left: {
-      title: "UMA INICIATIVA",
-      logos: [
-        {
-          src: "/assets/partners/museu-cinema.png",
-          alt: "Museu do Cinema",
-        },
-      ],
-    },
-    right: {
-      title: "PARCEIROS DE IMPLEMENTAÇÃO",
-      align: "right",
-      logos: [
-        {
-          src: "/assets/partners/ekran-eventos.png",
-          alt: "Ekran Eventos",
-        },
-        {
-          src: "/assets/partners/paralax.png",
-          alt: "Paralax",
-        },
-        {
-          src: "/assets/partners/tela-digital.png",
-          alt: "Tela Digital",
-        },
-      ],
-    },
-  },
-  {
-    left: {
-      title: "FINANCIADO PELA COOPERAÇÃO PORTUGUESA — CAMÕES, I.P.",
-      logos: [
-        {
-          src: "/assets/partners/camoes.png",
-          alt: "Camões — Instituto da Cooperação e da Língua, I.P.",
-        },
-      ],
-    },
-    right: {
-      title: "PARCEIROS INSTITUCIONAIS",
-      align: "right",
-      logos: [
-        {
-          src: "/assets/partners/inic.png",
-          alt: "INIC",
-        },
-        {
-          src: "/assets/partners/ministerio-da-cultura.png",
-          alt: "Ministério da Cultura",
-        },
-      ],
-    },
-  },
-  {
-    left: {
-      title: "OUTROS APOIOS FINANCEIROS",
-      logos: [
-        {
-          src: "/assets/partners/cultivarte.png",
-          alt: "Cultiv'Arte",
-        },
-        {
-          src: "/assets/partners/ministerio-da-educacao.png",
-          alt: "Ministério da Educação",
-        },
-        {
-          src: "/assets/partners/uniao.png",
-          alt: "União Europeia",
-        },
-        {
-          src: "/assets/partners/expertise-france.png",
-          alt: "Expertise France",
-        },
-      ],
-    },
-  },
-  {
-    left: {
-      title: "FASES ANTERIORES DESTE PROJECTO TIVERAM APOIO FINANCEIRO",
-      logos: [
-        {
-          src: "/assets/partners/uniao-europeia.png",
-          alt: "União Europeia",
-        },
-        // "PALOP-TL UE" lê-se como um só logótipo, mas vem em dois PNG com o
-        // mesmo tamanho e a mesma altura de letra. O mesmo recorte vertical
-        // mantém a linha de base; a margem transparente que fica à direita do
-        // primeiro e à esquerda do segundo faz de espaço entre as palavras.
-        {
-          alt: "PALOP-TL UE",
-          parts: [
-            {
-              src: "/assets/partners/palop-tl.png",
-              imageWidth: 1528,
-              imageHeight: 1080,
-              crop: { x: 255, y: 394, width: 1273, height: 307 },
-            },
-            {
-              src: "/assets/partners/ue.png",
-              imageWidth: 1528,
-              imageHeight: 1080,
-              crop: { x: 0, y: 394, width: 326, height: 307 },
-            },
-          ],
-        },
-      ],
-    },
-    right: {
-      title: "IMPLEMENTADO COM O APOIO DA EMBAIXADA DE FRANÇA EM MOÇAMBIQUE",
-      align: "right",
-      logos: [
-        {
-          src: "/assets/partners/ccfm.png",
-          alt: "Centro Cultural Franco-Moçambicano",
-        },
-        {
-          src: "/assets/partners/france-2.png",
-          alt: "França",
-        },
-      ],
-    },
-  },
-];
+/**
+ * Os grupos vêm do painel (Personalizar > Parceiros) por ordem. Um grupo
+ * "right" junta-se ao grupo "left" imediatamente antes, na mesma linha.
+ */
+function toRows(groups: PartnerGroupSettings[]): PartnerRow[] {
+  const rows: PartnerRow[] = [];
+
+  for (const group of groups) {
+    if (group.logos.length === 0) continue;
+
+    const data: PartnerGroupData = { title: group.title, align: group.side, logos: group.logos };
+    const last = rows.at(-1);
+
+    if (group.side === "right" && last && !last.right) {
+      last.right = data;
+    } else {
+      rows.push(group.side === "right" ? { id: group.id, right: data } : { id: group.id, left: data });
+    }
+  }
+
+  return rows;
+}
 
 function LogoBox({
   src,
@@ -203,47 +81,6 @@ function LogoBox({
   );
 }
 
-function WordmarkPartImage({ src, imageWidth, imageHeight, crop }: WordmarkPart) {
-  // A caixa tem as proporções do recorte; a imagem inteira é escalada e
-  // deslocada em percentagens da caixa, para o recorte a preencher.
-  return (
-    <div
-      className="relative h-full shrink-0 overflow-hidden"
-      style={{ aspectRatio: `${crop.width} / ${crop.height}` }}
-    >
-      <Image
-        src={src}
-        width={imageWidth}
-        height={imageHeight}
-        alt=""
-        className="absolute max-w-none"
-        style={{
-          width: `${(imageWidth / crop.width) * 100}%`,
-          height: `${(imageHeight / crop.height) * 100}%`,
-          left: `${(-crop.x / crop.width) * 100}%`,
-          top: `${(-crop.y / crop.height) * 100}%`,
-        }}
-      />
-    </div>
-  );
-}
-
-function WordmarkBox({ alt, parts }: Wordmark) {
-  return (
-    // Mesma altura das outras caixas; o texto ocupa a mesma fracção da
-    // altura que ocupava quando cada PNG tinha a sua caixa.
-    <div role="img" aria-label={alt} className="flex h-28 shrink-0 items-center sm:h-32 lg:h-37.5">
-      <div className="flex h-[27%]">
-        {parts.map((part) => (
-          <WordmarkPartImage key={part.src} {...part} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-const isWordmark = (logo: PartnerLogo): logo is Wordmark => "parts" in logo;
-
 function PartnerGroup({
   title,
   align = "left",
@@ -262,13 +99,9 @@ function PartnerGroup({
         className={`flex h-auto w-full flex-wrap gap-1 lg:h-37.5 lg:w-auto lg:flex-nowrap ${align === "right" ? "lg:justify-end" : "justify-start"
           }`}
       >
-        {logos.map((logo, index) =>
-          isWordmark(logo) ? (
-            <WordmarkBox key={logo.alt} {...logo} />
-          ) : (
-            <LogoBox key={`${logo.src}-${index}`} {...logo} />
-          ),
-        )}
+        {logos.map((logo) => (
+          <LogoBox key={logo.id} src={logo.imageUrl} alt={logo.alt} />
+        ))}
       </div>
     </div>
   );
@@ -276,15 +109,18 @@ function PartnerGroup({
 
 
 export function Partners() {
+  const { partners } = useSiteSettings();
+  const rows = toRows(partners.groups);
+
   return (
     <section className="bg-rede-white py-12 sm:py-14 lg:py-16">
       <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-10 px-4 sm:px-6 lg:gap-6 xl:px-0">
-        {PARTNER_ROWS.map((row) => (
+        {rows.map((row) => (
           <div
-            key={row.left.title}
+            key={row.id}
             className="flex w-full flex-col items-start justify-between gap-8 lg:flex-row lg:items-center lg:gap-4"
           >
-            <PartnerGroup {...row.left} />
+            {row.left ? <PartnerGroup {...row.left} /> : <div aria-hidden="true" />}
 
             {row.right && <PartnerGroup {...row.right} />}
           </div>

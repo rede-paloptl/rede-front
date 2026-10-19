@@ -9,6 +9,7 @@ import { Modal } from "@/components/ui/modal";
 import { ImageCropUploader } from "@/components/ImageCropUploader";
 import { EditProfile, ProfileHeroDraft } from "./EditProfile";
 import { ShowProfile } from "./ShowProfile";
+import { useSiteSettings } from "@/components/contexts/SiteSettingsContext";
 
 type ProfileData = User["profileData"];
 
@@ -32,6 +33,7 @@ export const Hero: React.FC<HeroProps> = ({
   onSaveProfileData,
   onImageUploadError,
 }) => {
+  const { placeholders } = useSiteSettings();
   const [isEditing, setIsEditing] = useState(false);
   const [isCoverCropOpen, setIsCoverCropOpen] = useState(false);
 
@@ -75,7 +77,7 @@ export const Hero: React.FC<HeroProps> = ({
     <section className="h-auto w-full">
       <div className="relative mx-auto min-h-[580px] w-full max-w-480 overflow-hidden sm:min-h-[540px] lg:h-124.25 lg:min-h-0">
         <Image
-          src={profileData.coverImageUrl || "/assets/profile/hero.png"}
+          src={profileData.coverImageUrl || placeholders.profileCoverUrl}
           alt="Capa do perfil"
           fill
           priority

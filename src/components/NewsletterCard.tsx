@@ -7,6 +7,7 @@ import { Heading } from "./ui/heading";
 import { Text } from "./ui/text";
 import { ArrowRight } from "lucide-react";
 import { formatMonthOfYear } from "@/lib/dates";
+import { useSiteSettings } from "@/components/contexts/SiteSettingsContext";
 
 
 
@@ -40,6 +41,7 @@ type NewsletterCardType = {
 }
 
 export const NewsletterCard: React.FC<NewsletterCardType> = ({ newsletterData }) => {
+    const { placeholders } = useSiteSettings();
     const [isDownloading, setIsDownloading] = useState(false);
 
     // O PDF vive noutro dominio (R2), onde o atributo `download` e ignorado:
@@ -76,7 +78,7 @@ export const NewsletterCard: React.FC<NewsletterCardType> = ({ newsletterData })
     return (
         <Card image={
         <img
-            src={newsletterData?.imageUrl || "/assets/newsletter.png"}
+            src={newsletterData?.imageUrl || placeholders.newsletterImageUrl}
             className="w-full h-full object-cover" alt="Diretora no set de filmagem" />
         }
             footer={

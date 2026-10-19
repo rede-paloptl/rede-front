@@ -1,4 +1,4 @@
-
+import { heroPageMetadata } from "@/lib/seo";
 import { Footer } from "@/components/Footer";
 import { TopBar } from "@/components/TopBar";
 import { Hero } from "@/components/Hero";
@@ -10,16 +10,14 @@ import { GovernanceFrameworkSection } from "@/components/about/GovernanceFramewo
 import { CommunicationAndVisibilityStrategy } from "@/components/about/CommunicationAndVisibilityStrategy";
 
 
+// Titulo, texto e imagem do destaque (Personalizar > Destaques das paginas).
+export const generateMetadata = () => heroPageMetadata("about", "/about");
+
 export default function AboutPage() {
   return (
     <main className="bg-rede-bg">
       <TopBar />
-      <Hero
-        imageUrl="/assets/agency/hero.png"
-        title="Sobre nós"
-        description={`A REDE de Cinema e Audiovisual PALOP+TL é uma iniciativa criada em 2018 por 
-          jovens realizadores, produtores e diretores de festivais dos Países Africanos de Língua Oficial Portuguesa. Procuramos formas de contribuir para a melhoria do ecossistema do setor audiovisual destes países, através de ações complementares, com vários focos de atuação.`}
-      />
+      <Hero page="about" />
       <About />
       <TeamSection />
       <ProjectSection />
